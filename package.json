@@ -16,10 +16,14 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "detect-port": "^2.1.0",
+    "tree-kill": "^1.2.2",
+    "wait-on": "^9.0.3",
     "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/wait-on": "^5.3.4",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
