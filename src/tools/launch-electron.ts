@@ -10,6 +10,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { Resource } from "../types/index.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
+import { setupAutoCapture } from "../screenshot/auto-capture.js";
 
 /**
  * Register the launch_electron tool with the MCP server
@@ -76,10 +77,22 @@ export function registerLaunchElectronTool(
         const window = await electronApp.firstWindow();
         console.error(`[launch_electron] Window detected, app ready`);
 
+        // Store page reference for screenshot access
+        sessionManager.setPageRef(sessionId, "electron", {
+          type: "electron",
+          page: window,
+          electronApp,
+        });
+
+        // Attach auto-capture on navigation events
+        const removeAutoCapture = setupAutoCapture(window, sessionId, sessionManager);
+
         // Create a resource that cleans up the Electron app
         const resource: Resource = {
           cleanup: async () => {
             console.error(`[launch_electron] Closing Electron app`);
+            removeAutoCapture();
+            sessionManager.removePageRef(sessionId, "electron");
             await electronApp.close();
             console.error(`[launch_electron] Electron app closed`);
           },
