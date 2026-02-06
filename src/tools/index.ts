@@ -10,6 +10,7 @@ import { registerCheckPortTool } from "./check-port.js";
 import { registerLaunchWebServerTool } from "./launch-web-server.js";
 import { registerLaunchElectronTool } from "./launch-electron.js";
 import { registerLaunchWindowsExeTool } from "./launch-windows-exe.js";
+import { registerStopProcessTool } from "./stop-process.js";
 
 /**
  * Register all MCP tools with the server
@@ -107,5 +108,8 @@ export function registerTools(
   // Tool 8: launch_windows_exe
   registerLaunchWindowsExeTool(server, sessionManager);
 
-  console.error("Registered 8 MCP tools");
+  // Tool 9: stop_process
+  registerStopProcessTool(server, sessionManager);
+
+  console.error("Registered 9 MCP tools");
 }
