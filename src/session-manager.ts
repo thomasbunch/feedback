@@ -5,12 +5,23 @@
 
 import { Session, Resource } from "./types/index.js";
 import { PageReference, AutoCaptureData } from "./screenshot/types.js";
+import {
+  Collector,
+  ConsoleEntry,
+  ErrorEntry,
+  NetworkEntry,
+  ProcessOutputEntry,
+} from "./capture/types.js";
 import { randomUUID } from "crypto";
 
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
   private pageRefs: Map<string, PageReference> = new Map();
   private autoCaptures: Map<string, AutoCaptureData> = new Map();
+  private consoleCollectors: Map<string, Collector<ConsoleEntry>> = new Map();
+  private errorCollectors: Map<string, Collector<ErrorEntry>> = new Map();
+  private networkCollectors: Map<string, Collector<NetworkEntry>> = new Map();
+  private processCollectors: Map<string, Collector<ProcessOutputEntry>> = new Map();
 
   /**
    * Create a new session with a unique UUID
@@ -110,6 +121,126 @@ export class SessionManager {
     return this.autoCaptures.get(sessionId);
   }
 
+  // --- Console Collectors ---
+
+  /**
+   * Store a console collector for a session
+   */
+  setConsoleCollector(sessionId: string, identifier: string, collector: Collector<ConsoleEntry>): void {
+    this.consoleCollectors.set(`${sessionId}:${identifier}`, collector);
+  }
+
+  /**
+   * Get a specific console collector by session and identifier
+   */
+  getConsoleCollector(sessionId: string, identifier: string): Collector<ConsoleEntry> | undefined {
+    return this.consoleCollectors.get(`${sessionId}:${identifier}`);
+  }
+
+  /**
+   * Get all console collectors for a session
+   */
+  getConsoleCollectors(sessionId: string): Collector<ConsoleEntry>[] {
+    const collectors: Collector<ConsoleEntry>[] = [];
+    const prefix = `${sessionId}:`;
+    for (const [key, collector] of this.consoleCollectors) {
+      if (key.startsWith(prefix)) {
+        collectors.push(collector);
+      }
+    }
+    return collectors;
+  }
+
+  // --- Error Collectors ---
+
+  /**
+   * Store an error collector for a session
+   */
+  setErrorCollector(sessionId: string, identifier: string, collector: Collector<ErrorEntry>): void {
+    this.errorCollectors.set(`${sessionId}:${identifier}`, collector);
+  }
+
+  /**
+   * Get a specific error collector by session and identifier
+   */
+  getErrorCollector(sessionId: string, identifier: string): Collector<ErrorEntry> | undefined {
+    return this.errorCollectors.get(`${sessionId}:${identifier}`);
+  }
+
+  /**
+   * Get all error collectors for a session
+   */
+  getErrorCollectors(sessionId: string): Collector<ErrorEntry>[] {
+    const collectors: Collector<ErrorEntry>[] = [];
+    const prefix = `${sessionId}:`;
+    for (const [key, collector] of this.errorCollectors) {
+      if (key.startsWith(prefix)) {
+        collectors.push(collector);
+      }
+    }
+    return collectors;
+  }
+
+  // --- Network Collectors ---
+
+  /**
+   * Store a network collector for a session
+   */
+  setNetworkCollector(sessionId: string, identifier: string, collector: Collector<NetworkEntry>): void {
+    this.networkCollectors.set(`${sessionId}:${identifier}`, collector);
+  }
+
+  /**
+   * Get a specific network collector by session and identifier
+   */
+  getNetworkCollector(sessionId: string, identifier: string): Collector<NetworkEntry> | undefined {
+    return this.networkCollectors.get(`${sessionId}:${identifier}`);
+  }
+
+  /**
+   * Get all network collectors for a session
+   */
+  getNetworkCollectors(sessionId: string): Collector<NetworkEntry>[] {
+    const collectors: Collector<NetworkEntry>[] = [];
+    const prefix = `${sessionId}:`;
+    for (const [key, collector] of this.networkCollectors) {
+      if (key.startsWith(prefix)) {
+        collectors.push(collector);
+      }
+    }
+    return collectors;
+  }
+
+  // --- Process Collectors ---
+
+  /**
+   * Store a process output collector for a session
+   */
+  setProcessCollector(sessionId: string, identifier: string, collector: Collector<ProcessOutputEntry>): void {
+    this.processCollectors.set(`${sessionId}:${identifier}`, collector);
+  }
+
+  /**
+   * Get a specific process collector by session and identifier
+   */
+  getProcessCollector(sessionId: string, identifier: string): Collector<ProcessOutputEntry> | undefined {
+    return this.processCollectors.get(`${sessionId}:${identifier}`);
+  }
+
+  /**
+   * Get all process collectors for a session
+   */
+  getProcessCollectors(sessionId: string): Collector<ProcessOutputEntry>[] {
+    const collectors: Collector<ProcessOutputEntry>[] = [];
+    const prefix = `${sessionId}:`;
+    for (const [key, collector] of this.processCollectors) {
+      if (key.startsWith(prefix)) {
+        collectors.push(collector);
+      }
+    }
+    return collectors;
+  }
+
   /**
    * Destroy a session and clean up all its resources
    * Logs cleanup errors but doesn't throw
@@ -138,6 +269,32 @@ export class SessionManager {
           console.error(`Error cleaning up page ref in session ${sessionId}:`, error);
         }
         this.pageRefs.delete(key);
+      }
+    }
+
+    // Clean up diagnostic collectors for this session
+    for (const [key, collector] of this.consoleCollectors) {
+      if (key.startsWith(prefix)) {
+        collector.detach();
+        this.consoleCollectors.delete(key);
+      }
+    }
+    for (const [key, collector] of this.errorCollectors) {
+      if (key.startsWith(prefix)) {
+        collector.detach();
+        this.errorCollectors.delete(key);
+      }
+    }
+    for (const [key, collector] of this.networkCollectors) {
+      if (key.startsWith(prefix)) {
+        collector.detach();
+        this.networkCollectors.delete(key);
+      }
+    }
+    for (const [key, collector] of this.processCollectors) {
+      if (key.startsWith(prefix)) {
+        collector.detach();
+        this.processCollectors.delete(key);
       }
     }
 
