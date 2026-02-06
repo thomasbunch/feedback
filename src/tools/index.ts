@@ -7,6 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
 import { registerCheckPortTool } from "./check-port.js";
+import { registerLaunchWebServerTool } from "./launch-web-server.js";
 
 /**
  * Register all MCP tools with the server
@@ -95,5 +96,8 @@ export function registerTools(
   // Tool 5: check_port
   registerCheckPortTool(server, sessionManager);
 
-  console.error("Registered 5 MCP tools");
+  // Tool 6: launch_web_server
+  registerLaunchWebServerTool(server, sessionManager);
+
+  console.error("Registered 6 MCP tools");
 }
