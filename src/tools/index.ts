@@ -9,6 +9,7 @@ import { createToolError, createToolResult } from "../utils/errors.js";
 import { registerCheckPortTool } from "./check-port.js";
 import { registerLaunchWebServerTool } from "./launch-web-server.js";
 import { registerLaunchElectronTool } from "./launch-electron.js";
+import { registerLaunchWindowsExeTool } from "./launch-windows-exe.js";
 
 /**
  * Register all MCP tools with the server
@@ -103,5 +104,8 @@ export function registerTools(
   // Tool 7: launch_electron
   registerLaunchElectronTool(server, sessionManager);
 
-  console.error("Registered 7 MCP tools");
+  // Tool 8: launch_windows_exe
+  registerLaunchWindowsExeTool(server, sessionManager);
+
+  console.error("Registered 8 MCP tools");
 }
