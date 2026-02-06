@@ -19,9 +19,12 @@ export interface Session {
 }
 
 /**
- * MCP tool result format
+ * MCP tool result format (supports text and image content)
  */
 export type ToolResult = {
-  content: Array<{ type: "text"; text: string }>;
+  content: Array<
+    | { type: "text"; text: string }
+    | { type: "image"; data: string; mimeType: string }
+  >;
   isError?: boolean;
 };

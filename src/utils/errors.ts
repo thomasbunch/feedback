@@ -48,3 +48,31 @@ export function createToolResult(data: unknown): ToolResult {
     isError: false,
   };
 }
+
+/**
+ * Create a screenshot tool result with text metadata and image content
+ * @param metadata Metadata to include as JSON text
+ * @param imageBase64 Base64-encoded image data
+ * @param mimeType Image MIME type (default: 'image/webp')
+ * @returns ToolResult with text + image content
+ */
+export function createScreenshotResult(
+  metadata: Record<string, unknown>,
+  imageBase64: string,
+  mimeType: string = "image/webp"
+): ToolResult {
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(metadata, null, 2),
+      },
+      {
+        type: "image",
+        data: imageBase64,
+        mimeType,
+      },
+    ],
+    isError: false,
+  };
+}
