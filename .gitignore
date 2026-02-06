@@ -1,2 +1,7 @@
 .planning/
 /.planning
+
+# Build artifacts
+node_modules/
+build/
+*.tsbuildinfo
