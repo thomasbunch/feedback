@@ -18,6 +18,8 @@ import { registerGetScreenshotTool } from "./get-screenshot.js";
 import { registerClickElementTool } from "./click-element.js";
 import { registerTypeTextTool } from "./type-text.js";
 import { registerNavigateTool } from "./navigate.js";
+import { registerGetElementStateTool } from "./get-element-state.js";
+import { registerWaitForElementTool } from "./wait-for-element.js";
 
 /**
  * Register all MCP tools with the server
@@ -139,5 +141,11 @@ export function registerTools(
   // Tool 16: navigate
   registerNavigateTool(server, sessionManager);
 
-  console.error("Registered 16 MCP tools");
+  // Tool 17: get_element_state
+  registerGetElementStateTool(server, sessionManager);
+
+  // Tool 18: wait_for_element
+  registerWaitForElementTool(server, sessionManager);
+
+  console.error("Registered 18 MCP tools");
 }
