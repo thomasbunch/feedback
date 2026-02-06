@@ -1,4 +1,4 @@
-# Feedback Loop MCP
+# Feedback
 
 ## What This Is
 
@@ -47,7 +47,7 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 
 - **Tech stack**: TypeScript/Node for the MCP server — best MCP SDK support and Playwright is native to this ecosystem
 - **Platform**: Must work on Windows (C# desktop support requires it), should also work on macOS/Linux for web/Electron
-- **Distribution**: npm package — lowest friction for Claude Code users
+- **Distribution**: npm package named `feedback` — lowest friction for Claude Code users
 - **MCP Protocol**: Must conform to the MCP server specification so Claude Code can discover and call tools
 - **Performance**: Screenshots and interactions must be fast enough for iterative development (sub-second for screenshots, quick element interaction)
 
