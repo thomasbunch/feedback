@@ -13,6 +13,7 @@ import {
   attachProcessListeners,
 } from "../process/launcher.js";
 import { createProcessResource } from "../process/cleanup.js";
+import { attachProcessCollector } from "../capture/process-collector.js";
 
 /**
  * Register the launch_windows_exe tool with the MCP server
@@ -69,6 +70,10 @@ export function registerLaunchWindowsExeTool(
           child,
           `WinExe:${path.basename(resolvedExePath)}`
         );
+
+        // Attach process output collector for retrieval
+        const processCollector = attachProcessCollector(child);
+        sessionManager.setProcessCollector(sessionId, `WinExe:${path.basename(resolvedExePath)}`, processCollector);
 
         // Wait briefly for immediate spawn errors
         await new Promise<void>((resolve, reject) => {

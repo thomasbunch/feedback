@@ -14,6 +14,7 @@ import {
 } from "../process/launcher.js";
 import { detectServerReady } from "../process/monitor.js";
 import { createProcessResource } from "../process/cleanup.js";
+import { attachProcessCollector } from "../capture/process-collector.js";
 
 /**
  * Register the launch_web_server tool with the MCP server
@@ -75,6 +76,10 @@ export function registerLaunchWebServerTool(
 
         // Attach logging listeners
         attachProcessListeners(child, `WebServer:${port}`);
+
+        // Attach process output collector for retrieval
+        const processCollector = attachProcessCollector(child);
+        sessionManager.setProcessCollector(sessionId, `WebServer:${port}`, processCollector);
 
         // Register process as a session resource for automatic cleanup
         const resource = createProcessResource(child, "web-server");
