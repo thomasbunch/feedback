@@ -38,3 +38,25 @@ export type PageDiscoveryResult =
       error: string;
       availablePages?: string[];
     };
+
+/** State values for locator.waitFor() */
+export type WaitForState = "visible" | "hidden" | "attached" | "detached";
+
+/** Shape of the get_element_state tool response */
+export interface ElementStateResult {
+  selector: string;
+  visible: boolean;
+  enabled: boolean;
+  editable: boolean;
+  checked: boolean | null; // null if not checkbox/radio
+  textContent: string | null; // all text (includes hidden)
+  innerText: string; // visible text only
+  inputValue: string | null; // null if not input/textarea/select
+  attributes: Record<string, string | null>;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+}
