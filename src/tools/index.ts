@@ -11,6 +11,10 @@ import { registerLaunchWebServerTool } from "./launch-web-server.js";
 import { registerLaunchElectronTool } from "./launch-electron.js";
 import { registerLaunchWindowsExeTool } from "./launch-windows-exe.js";
 import { registerStopProcessTool } from "./stop-process.js";
+import { registerScreenshotWebTool } from "./screenshot-web.js";
+import { registerScreenshotElectronTool } from "./screenshot-electron.js";
+import { registerScreenshotDesktopTool } from "./screenshot-desktop.js";
+import { registerGetScreenshotTool } from "./get-screenshot.js";
 
 /**
  * Register all MCP tools with the server
@@ -111,5 +115,17 @@ export function registerTools(
   // Tool 9: stop_process
   registerStopProcessTool(server, sessionManager);
 
-  console.error("Registered 9 MCP tools");
+  // Tool 10: screenshot_web
+  registerScreenshotWebTool(server, sessionManager);
+
+  // Tool 11: screenshot_electron
+  registerScreenshotElectronTool(server, sessionManager);
+
+  // Tool 12: screenshot_desktop
+  registerScreenshotDesktopTool(server, sessionManager);
+
+  // Tool 13: get_screenshot
+  registerGetScreenshotTool(server, sessionManager);
+
+  console.error("Registered 13 MCP tools");
 }
