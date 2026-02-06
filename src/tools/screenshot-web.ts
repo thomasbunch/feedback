@@ -11,6 +11,9 @@ import { createToolError, createScreenshotResult } from "../utils/errors.js";
 import { capturePlaywrightPage } from "../screenshot/capture.js";
 import { optimizeScreenshot } from "../screenshot/optimize.js";
 import { setupAutoCapture } from "../screenshot/auto-capture.js";
+import { attachConsoleCollector } from "../capture/console-collector.js";
+import { attachErrorCollector } from "../capture/error-collector.js";
+import { attachNetworkCollector } from "../capture/network-collector.js";
 
 /**
  * Register the screenshot_web tool with the MCP server
@@ -92,6 +95,15 @@ export function registerScreenshotWebTool(
 
           // Attach auto-capture on navigation
           setupAutoCapture(page, sessionId, sessionManager);
+
+          // Attach diagnostic collectors
+          const consoleCollector = attachConsoleCollector(page);
+          const errorCollector = attachErrorCollector(page);
+          const networkCollector = attachNetworkCollector(page);
+
+          sessionManager.setConsoleCollector(sessionId, url, consoleCollector);
+          sessionManager.setErrorCollector(sessionId, url, errorCollector);
+          sessionManager.setNetworkCollector(sessionId, url, networkCollector);
 
           // Register browser cleanup as a session resource
           sessionManager.addResource(sessionId, {

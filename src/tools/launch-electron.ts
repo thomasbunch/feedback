@@ -11,6 +11,9 @@ import { SessionManager } from "../session-manager.js";
 import { Resource } from "../types/index.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
 import { setupAutoCapture } from "../screenshot/auto-capture.js";
+import { attachConsoleCollector } from "../capture/console-collector.js";
+import { attachErrorCollector } from "../capture/error-collector.js";
+import { attachNetworkCollector } from "../capture/network-collector.js";
 
 /**
  * Register the launch_electron tool with the MCP server
@@ -86,6 +89,15 @@ export function registerLaunchElectronTool(
 
         // Attach auto-capture on navigation events
         const removeAutoCapture = setupAutoCapture(window, sessionId, sessionManager);
+
+        // Attach diagnostic collectors
+        const consoleCollector = attachConsoleCollector(window);
+        const errorCollector = attachErrorCollector(window);
+        const networkCollector = attachNetworkCollector(window);
+
+        sessionManager.setConsoleCollector(sessionId, "electron", consoleCollector);
+        sessionManager.setErrorCollector(sessionId, "electron", errorCollector);
+        sessionManager.setNetworkCollector(sessionId, "electron", networkCollector);
 
         // Create a resource that cleans up the Electron app
         const resource: Resource = {
