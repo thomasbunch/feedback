@@ -4,10 +4,13 @@
  */
 
 import { Session, Resource } from "./types/index.js";
+import { PageReference, AutoCaptureData } from "./screenshot/types.js";
 import { randomUUID } from "crypto";
 
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
+  private pageRefs: Map<string, PageReference> = new Map();
+  private autoCaptures: Map<string, AutoCaptureData> = new Map();
 
   /**
    * Create a new session with a unique UUID
@@ -54,6 +57,60 @@ export class SessionManager {
   }
 
   /**
+   * Store a typed Playwright Page reference for a session
+   * Key format: ${sessionId}:${identifier} where identifier is URL or 'electron'
+   */
+  setPageRef(sessionId: string, identifier: string, ref: PageReference): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+    this.pageRefs.set(`${sessionId}:${identifier}`, ref);
+  }
+
+  /**
+   * Get a specific page reference by session and identifier
+   */
+  getPageRef(sessionId: string, identifier: string): PageReference | undefined {
+    return this.pageRefs.get(`${sessionId}:${identifier}`);
+  }
+
+  /**
+   * Get all page references for a session
+   */
+  getPageRefs(sessionId: string): PageReference[] {
+    const refs: PageReference[] = [];
+    const prefix = `${sessionId}:`;
+    for (const [key, ref] of this.pageRefs) {
+      if (key.startsWith(prefix)) {
+        refs.push(ref);
+      }
+    }
+    return refs;
+  }
+
+  /**
+   * Remove a specific page reference
+   */
+  removePageRef(sessionId: string, identifier: string): void {
+    this.pageRefs.delete(`${sessionId}:${identifier}`);
+  }
+
+  /**
+   * Store the latest auto-captured screenshot for a session
+   */
+  setAutoCapture(sessionId: string, data: AutoCaptureData): void {
+    this.autoCaptures.set(sessionId, data);
+  }
+
+  /**
+   * Get the latest auto-captured screenshot for a session
+   */
+  getAutoCapture(sessionId: string): AutoCaptureData | undefined {
+    return this.autoCaptures.get(sessionId);
+  }
+
+  /**
    * Destroy a session and clean up all its resources
    * Logs cleanup errors but doesn't throw
    * No-op if session doesn't exist
@@ -65,6 +122,27 @@ export class SessionManager {
     }
 
     console.error(`Destroying session ${sessionId} (${session.resources.length} resources)`);
+
+    // Clean up page references for this session
+    const prefix = `${sessionId}:`;
+    for (const [key, ref] of this.pageRefs) {
+      if (key.startsWith(prefix)) {
+        try {
+          if (ref.browserContext) {
+            await ref.browserContext.close();
+          }
+          if (ref.browser) {
+            await ref.browser.close();
+          }
+        } catch (error) {
+          console.error(`Error cleaning up page ref in session ${sessionId}:`, error);
+        }
+        this.pageRefs.delete(key);
+      }
+    }
+
+    // Clean up auto-capture data
+    this.autoCaptures.delete(sessionId);
 
     // Clean up each resource individually
     for (const resource of session.resources) {
