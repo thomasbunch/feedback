@@ -17,6 +17,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "detect-port": "^2.1.0",
+    "playwright": "^1.58.2",
     "tree-kill": "^1.2.2",
     "wait-on": "^9.0.3",
     "zod": "^3.25.0"
