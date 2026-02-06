@@ -15,6 +15,7 @@ import { registerScreenshotWebTool } from "./screenshot-web.js";
 import { registerScreenshotElectronTool } from "./screenshot-electron.js";
 import { registerScreenshotDesktopTool } from "./screenshot-desktop.js";
 import { registerGetScreenshotTool } from "./get-screenshot.js";
+import { registerClickElementTool } from "./click-element.js";
 
 /**
  * Register all MCP tools with the server
@@ -127,5 +128,8 @@ export function registerTools(
   // Tool 13: get_screenshot
   registerGetScreenshotTool(server, sessionManager);
 
-  console.error("Registered 13 MCP tools");
+  // Tool 14: click_element
+  registerClickElementTool(server, sessionManager);
+
+  console.error("Registered 14 MCP tools");
 }
