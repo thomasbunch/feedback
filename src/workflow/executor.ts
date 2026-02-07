@@ -14,6 +14,7 @@ import type { WorkflowStep, StepResult, WorkflowResult } from "./types.js";
 import { resolveSelector } from "../interaction/selectors.js";
 import { capturePlaywrightPage } from "../screenshot/capture.js";
 import { optimizeScreenshot } from "../screenshot/optimize.js";
+import { evaluateAssertion } from "./assertions.js";
 
 /**
  * Validate a workflow step has all required fields for its action type.
@@ -50,6 +51,23 @@ export function validateStep(step: WorkflowStep, index: number): string | null {
     case "screenshot":
       // No required fields
       break;
+    case "assert": {
+      if (!step.selector) {
+        return `Step ${index}: 'assert' requires a 'selector' field`;
+      }
+      if (!step.assertType) {
+        return `Step ${index}: 'assert' requires an 'assertType' field`;
+      }
+      const needsExpected = ["text-equals", "text-contains", "value-equals", "attribute-equals"];
+      if (needsExpected.includes(step.assertType) && step.expected === undefined) {
+        return `Step ${index}: '${step.assertType}' assertion requires an 'expected' field`;
+      }
+      const needsAttribute = ["has-attribute", "attribute-equals"];
+      if (needsAttribute.includes(step.assertType) && !step.attribute) {
+        return `Step ${index}: '${step.assertType}' assertion requires an 'attribute' field`;
+      }
+      break;
+    }
     default:
       return `Step ${index}: unknown action '${(step as any).action}'`;
   }
@@ -170,6 +188,37 @@ export async function executeWorkflow(params: {
           });
           break;
         }
+
+        case "assert": {
+          const effectiveTimeout = step.timeout ?? 30000;
+          const assertionResult = await evaluateAssertion(page, step, effectiveTimeout);
+          result.assertion = assertionResult;
+
+          if (!assertionResult.passed) {
+            // Failed assertion: capture screenshot + log deltas, then stop workflow
+            const rawBuffer = await capturePlaywrightPage(page, { fullPage: step.fullPage ?? false });
+            const optimized = await optimizeScreenshot(rawBuffer, { maxWidth: 1024, quality: 60 });
+            result.screenshotBase64 = optimized.data.toString("base64");
+            result.screenshotMimeType = optimized.mimeType;
+
+            // Capture log deltas
+            const allConsole = sessionManager.getConsoleCollectors(sessionId).flatMap((c) => [...c.getEntries()]);
+            const allErrors = sessionManager.getErrorCollectors(sessionId).flatMap((c) => [...c.getEntries()]);
+            result.consoleDelta = allConsole.slice(lastConsoleCount);
+            result.errorDelta = allErrors.slice(lastErrorCount);
+            lastConsoleCount = allConsole.length;
+            lastErrorCount = allErrors.length;
+
+            results.push(result);
+            break; // Break out of switch
+          }
+          break; // Switch break for passed assertions (falls through to normal screenshot/log capture)
+        }
+      }
+
+      // Stop-on-error for failed assertions
+      if (step.action === "assert" && result.assertion && !result.assertion.passed) {
+        break; // Break the for loop
       }
 
       // Capture screenshot (aggressive optimization for workflows)
