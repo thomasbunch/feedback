@@ -3,9 +3,15 @@
  */
 
 import { z } from "zod";
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, "../../package.json"), "utf-8"));
 import { registerCheckPortTool } from "./check-port.js";
 import { registerLaunchWebServerTool } from "./launch-web-server.js";
 import { registerLaunchElectronTool } from "./launch-electron.js";
@@ -41,7 +47,7 @@ export function registerTools(
     async () => {
       return createToolResult({
         name: "feedback",
-        version: "0.1.0",
+        version: pkg.version,
         status: "ready",
         capabilities: [
           "process_lifecycle",
