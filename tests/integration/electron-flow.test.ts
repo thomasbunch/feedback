@@ -117,6 +117,6 @@ describe("Electron flow integration", () => {
       },
     });
     const stateData = parseToolResult(stateResult);
-    expect(stateData.text).toContain("Clicked!");
+    expect(stateData.textContent).toContain("Clicked!");
   }, 30_000);
 });

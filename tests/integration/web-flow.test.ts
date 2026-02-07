@@ -75,15 +75,17 @@ describe("Web flow integration", () => {
   }, 30_000);
 
   it("takes a screenshot of the web page", async () => {
+    const url = `http://localhost:${WEB_PORT}`;
     const result = await ctx.client.callTool({
       name: "screenshot_web",
       arguments: {
         sessionId,
-        url: `http://localhost:${WEB_PORT}`,
+        url,
       },
     });
 
-    // screenshot_web returns text metadata + image content
+    // screenshot_web returns text metadata + image content (2 items)
+    // If it returns 1 item, it likely errored (tool bug, not test infra bug)
     expect(result.content).toBeDefined();
     const content = result.content as any[];
     expect(content.length).toBeGreaterThanOrEqual(2);
@@ -93,12 +95,21 @@ describe("Web flow integration", () => {
   }, 30_000);
 
   it("clicks a button and verifies result", async () => {
-    // Click the button
+    const pageUrl = `http://localhost:${WEB_PORT}`;
+
+    // Ensure page exists by taking a screenshot first (creates browser + page ref)
+    await ctx.client.callTool({
+      name: "screenshot_web",
+      arguments: { sessionId, url: pageUrl },
+    });
+
+    // Click the button -- pass pageIdentifier since page is keyed by URL
     const clickResult = await ctx.client.callTool({
       name: "click_element",
       arguments: {
         sessionId,
         selector: "#click-me",
+        pageIdentifier: pageUrl,
       },
     });
     // click_element returns a screenshot (should not be an error)
@@ -114,10 +125,11 @@ describe("Web flow integration", () => {
       arguments: {
         sessionId,
         selector: "#output",
+        pageIdentifier: pageUrl,
       },
     });
     const stateData = parseToolResult(stateResult);
-    expect(stateData.text).toContain("Button was clicked!");
+    expect(stateData.textContent).toContain("Button was clicked!");
   }, 30_000);
 
   it("captures console logs", async () => {
