@@ -15,10 +15,11 @@ import type { ConsoleEntry, ErrorEntry } from "../capture/types.js";
  * - navigate: url
  * - wait: selector
  * - screenshot: (no required fields)
+ * - assert: selector, assertType (plus expected/attribute depending on assertType)
  */
 export interface WorkflowStep {
   /** Action to perform */
-  action: "click" | "type" | "navigate" | "screenshot" | "wait";
+  action: "click" | "type" | "navigate" | "screenshot" | "wait" | "assert";
 
   /** Element selector — required for click, type, wait */
   selector?: string;
@@ -46,6 +47,28 @@ export interface WorkflowStep {
 
   /** Wait state for wait action (default: visible) */
   state?: "visible" | "hidden" | "attached" | "detached";
+
+  /** Assertion type — required for assert action */
+  assertType?:
+    | "exists"
+    | "not-exists"
+    | "visible"
+    | "hidden"
+    | "text-equals"
+    | "text-contains"
+    | "has-attribute"
+    | "attribute-equals"
+    | "enabled"
+    | "disabled"
+    | "checked"
+    | "not-checked"
+    | "value-equals";
+
+  /** Expected value for text/attribute assertions */
+  expected?: string;
+
+  /** Attribute name for attribute assertions */
+  attribute?: string;
 
   /** Per-step timeout in ms (default: 30000) */
   timeout?: number;
@@ -83,6 +106,16 @@ export interface StepResult {
 
   /** Error message if step failed */
   error?: string;
+
+  /** Structured assertion result — only present for assert steps */
+  assertion?: {
+    passed: boolean;
+    assertType: string;
+    selector: string;
+    expected: string | null;
+    actual: string | null;
+    message: string;
+  };
 }
 
 /**
