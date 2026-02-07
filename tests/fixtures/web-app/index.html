@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Fixture</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #output { margin-top: 10px; padding: 10px; border: 1px solid #ccc; min-height: 30px; }
+    #hidden-element { margin-top: 10px; padding: 10px; background: #eef; }
+    button, input { margin: 5px; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <h1 id="heading">Hello Fixture</h1>
+
+  <button id="click-me">Click Me</button>
+  <button id="show-hidden">Show Hidden</button>
+  <button id="throw-error">Throw Error</button>
+  <button id="fetch-data">Fetch Data</button>
+
+  <br />
+  <input id="text-input" type="text" placeholder="Type here" />
+
+  <div id="output"></div>
+
+  <div id="hidden-element" style="display:none">Hidden</div>
+
+  <a id="nav-link" href="/page2.html">Go to Page 2</a>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
