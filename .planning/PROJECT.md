@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An MCP server for Claude Code that gives it eyes and hands for GUI development. When Claude builds a web app, Electron app, or C# desktop application, this MCP launches the app, captures screenshots, lets Claude interact with the UI (click buttons, fill forms, navigate), captures all errors and logs, and enables Claude to iterate until the GUI actually works. It turns Claude from a blind coder into one that can see, touch, and verify what it builds.
+An MCP server for Claude Code that gives it eyes and hands for GUI development. It launches web apps, Electron apps, and Windows desktop applications, captures screenshots, interacts with the UI (click, type, navigate, read state), captures errors and logs, and runs multi-step QA workflows with assertions. Claude can autonomously build, see, interact with, and verify GUI applications.
 
 ## Core Value
 
@@ -12,36 +12,38 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 
 ### Validated
 
-(None yet — ship to validate)
+- MCP server that Claude Code can connect to via standard MCP configuration — v1.0
+- Launch and manage app processes (dev servers, Electron apps, Windows .exe files) — v1.0
+- Take screenshots of running applications on demand and automatically on changes — v1.0
+- Interact with web/Electron UIs: click elements, type text, navigate pages, read element state (via Playwright) — v1.0
+- Capture build errors, console logs, runtime exceptions, and network requests — v1.0
+- Run multi-step QA workflows: execute a sequence of interactions and verify outcomes at each step — v1.0
+- Report QA results as pass/fail with screenshot evidence at each step — v1.0
+- Installable as npm package with simple MCP config setup — v1.0
 
 ### Active
 
-- [ ] MCP server that Claude Code can connect to via standard MCP configuration
-- [ ] Launch and manage app processes (dev servers, Electron apps, Windows .exe files)
-- [ ] Take screenshots of running applications on demand and automatically on changes
-- [ ] Interact with web/Electron UIs: click elements, type text, navigate pages, read element state (via Playwright)
-- [ ] Interact with C# desktop apps: take screenshots and click at screen coordinates
-- [ ] Capture build errors, console logs, runtime exceptions, and network requests
-- [ ] Run multi-step QA workflows: execute a sequence of interactions and verify outcomes at each step
-- [ ] Report QA results as pass/fail with screenshot evidence at each step
-- [ ] Support all three platforms: browser-based web apps, Electron apps, C# desktop (WPF/WinForms)
-- [ ] Installable as npm package with simple MCP config setup
+- [ ] Interact with C# desktop apps: click at screen coordinates, simulate keyboard input
+- [ ] Desktop window management: focus, resize, minimize/maximize
+- [ ] Read desktop element state via Windows UI Automation APIs
+- [ ] Self-healing element location using visual similarity when selectors break
+- [ ] Multi-browser support (Firefox, WebKit) beyond Chromium
 
 ### Out of Scope
 
-- Mobile app testing (iOS/Android) — different automation stack, defer to future
-- Visual regression testing (pixel-diff comparisons) — useful but not core to the feedback loop
+- Mobile app testing (iOS/Android) — different automation stack (Appium), massive scope expansion
+- Visual regression testing (pixel-diff comparisons) — too many false positives, not core to feedback loop
 - Test script persistence/management — Claude generates interactions on the fly, not stored test suites
 - CI/CD integration — this is a development-time tool for Claude Code, not a CI runner
+- Video recording — storage intensive; strategic screenshots at checkpoints provide 80% value
+- Cloud browser grid — scope creep; BrowserStack exists for this
 
 ## Context
 
-- Claude Code currently has no way to see the visual output of GUI code it writes, leading to blind iteration cycles where the user must describe what's wrong
-- MCP (Model Context Protocol) allows Claude Code to connect to external tool servers that extend its capabilities
-- Playwright is the leading browser automation library, supports Chromium/Firefox/WebKit and Electron apps natively
-- Windows UI Automation APIs exist for native desktop apps but are heavier; coordinate-based clicking is simpler and sufficient for v1 C# support
-- The MCP SDK is well-supported in TypeScript/Node, which aligns with Playwright's ecosystem
-- This tool would be used by developers who use Claude Code to build GUI applications and want Claude to self-verify its work
+Shipped v1.0 with 5,009 lines of TypeScript across 44 source files.
+Tech stack: TypeScript/Node.js, MCP SDK, Playwright, Sharp, node-screenshots.
+23 MCP tools covering sessions, process management, screenshots, UI interaction, error capture, workflows, and assertions.
+Built in 2 days (Feb 5-7, 2026) across 8 phases and 22 plans.
 
 ## Constraints
 
@@ -55,11 +57,20 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| TypeScript/Node for MCP server | MCP SDK + Playwright ecosystem alignment | — Pending |
-| Playwright for web/Electron automation | Industry standard, supports Electron natively, fast | — Pending |
-| Coordinate-based clicking for C# desktop | Full UI Automation is heavy; screenshots + click-at-coords is simpler and sufficient for v1 | — Pending |
-| npm package distribution | Lowest friction install for Claude Code users | — Pending |
-| Auto + on-demand screenshots | Auto-capture catches changes; on-demand lets Claude check specific states | — Pending |
+| TypeScript/Node for MCP server | MCP SDK + Playwright ecosystem alignment | Good |
+| Playwright for web/Electron automation | Industry standard, supports Electron natively, fast | Good |
+| Coordinate-based clicking for C# desktop | Full UI Automation is heavy; screenshots + click-at-coords is simpler for v1 | Good (deferred to v2) |
+| npm package distribution | Lowest friction install for Claude Code users | Good |
+| Auto + on-demand screenshots | Auto-capture catches changes; on-demand lets Claude check states | Good |
+| zod ^3.25.0 (not ^4.0.0) | MCP SDK v1.x requires Zod v3.x peer dependency | Good |
+| Node16 ESM with .js extensions | Required for TypeScript ESM modules | Good |
+| console.error only for logging | stdio transport uses stdout for MCP protocol | Good |
+| crypto.randomUUID() for session IDs | Node built-in, cryptographically secure | Good |
+| Structured errors (Error/Context/Suggested fix) | Human-readable with actionable guidance | Good |
+| Best-effort cleanup (always resolves) | Cleanup failures should not block shutdown | Good |
+| Dual readiness (stdout + TCP polling) | Fast for Vite/Next; reliable TCP fallback | Good |
+| Flat Zod schema for workflow steps | Simpler for LLM callers than discriminated unions | Good |
+| Assertion failures return {passed:false} | Assertions expected to fail; exceptions for unexpected errors only | Good |
 
 ---
-*Last updated: 2026-02-06 after initialization*
+*Last updated: 2026-02-07 after v1.0 milestone*
