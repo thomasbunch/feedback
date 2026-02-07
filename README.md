@@ -9,7 +9,7 @@ Claude Code currently has no way to see the visual output of GUI code it writes.
 ## Install
 
 ```bash
-npm install -g feedback
+npm install -g auto-feedback
 ```
 
 Then install Playwright browsers (required for web/Electron automation):
@@ -26,7 +26,7 @@ Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.cla
 {
   "mcpServers": {
     "feedback": {
-      "command": "feedback",
+      "command": "auto-feedback",
       "args": []
     }
   }
@@ -40,7 +40,7 @@ Or if installed locally in a project:
   "mcpServers": {
     "feedback": {
       "command": "npx",
-      "args": ["feedback"]
+      "args": ["auto-feedback"]
     }
   }
 }

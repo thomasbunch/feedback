@@ -1,10 +1,10 @@
 {
-  "name": "feedback",
+  "name": "auto-feedback",
   "version": "0.1.0",
   "type": "module",
   "description": "MCP server for GUI testing and feedback - gives Claude Code eyes and hands",
   "bin": {
-    "feedback": "./build/index.js"
+    "auto-feedback": "./build/index.js"
   },
   "files": [
     "build"
