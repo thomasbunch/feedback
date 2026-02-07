@@ -25,7 +25,7 @@ export function registerRunWorkflowTool(
 ): void {
   server.tool(
     "run_workflow",
-    "Execute a multi-step workflow on a web or Electron page. Runs actions in sequence, captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, or multi-step UI verification.",
+    "Execute a multi-step workflow on a web or Electron page. Runs actions in sequence, captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, or multi-step UI verification with pass/fail assertions.",
     {
       sessionId: z
         .string()
@@ -34,7 +34,7 @@ export function registerRunWorkflowTool(
         .array(
           z.object({
             action: z
-              .enum(["click", "type", "navigate", "screenshot", "wait"])
+              .enum(["click", "type", "navigate", "screenshot", "wait", "assert"])
               .describe("Action to perform"),
             selector: z
               .string()
@@ -87,6 +87,38 @@ export function registerRunWorkflowTool(
               .min(0)
               .optional()
               .describe("Step timeout in ms (default: 30000)"),
+            assertType: z
+              .enum([
+                "exists",
+                "not-exists",
+                "visible",
+                "hidden",
+                "text-equals",
+                "text-contains",
+                "has-attribute",
+                "attribute-equals",
+                "enabled",
+                "disabled",
+                "checked",
+                "not-checked",
+                "value-equals",
+              ])
+              .optional()
+              .describe(
+                "Assertion type (required for assert action). Checks element state and reports pass/fail."
+              ),
+            expected: z
+              .string()
+              .optional()
+              .describe(
+                "Expected value for text-equals, text-contains, value-equals, attribute-equals assertions"
+              ),
+            attribute: z
+              .string()
+              .optional()
+              .describe(
+                "Attribute name for has-attribute, attribute-equals assertions"
+              ),
           })
         )
         .min(1)
@@ -161,19 +193,28 @@ export function registerRunWorkflowTool(
         const content: ToolResult["content"] = [];
 
         // Summary header
+        const summary: Record<string, unknown> = {
+          workflow:
+            result.failedStep !== undefined ? "stopped" : "complete",
+          totalSteps: result.totalSteps,
+          completedSteps: result.completedSteps,
+          failedAtStep: result.failedStep,
+        };
+
+        // Include assertion counts when assert steps are present
+        const assertSteps = result.steps.filter((r) => r.assertion);
+        if (assertSteps.length > 0) {
+          summary.assertionsPassed = result.steps.filter(
+            (r) => r.assertion?.passed === true
+          ).length;
+          summary.assertionsFailed = result.steps.filter(
+            (r) => r.assertion?.passed === false
+          ).length;
+        }
+
         content.push({
           type: "text",
-          text: JSON.stringify(
-            {
-              workflow:
-                result.failedStep !== undefined ? "stopped" : "complete",
-              totalSteps: result.totalSteps,
-              completedSteps: result.completedSteps,
-              failedAtStep: result.failedStep,
-            },
-            null,
-            2
-          ),
+          text: JSON.stringify(summary, null, 2),
         });
 
         // Per-step text metadata and screenshot images
@@ -186,6 +227,11 @@ export function registerRunWorkflowTool(
             consoleLogs: r.consoleDelta.length,
             errors: r.errorDelta.length,
           };
+
+          // Include assertion result when present
+          if (r.assertion) {
+            stepMeta.assertion = r.assertion;
+          }
 
           // Include error details inline when present
           if (r.errorDelta.length > 0) {

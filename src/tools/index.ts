@@ -49,6 +49,7 @@ export function registerTools(
           "interactions",
           "error_capture",
           "workflows",
+          "assertions",
         ],
       });
     }
