@@ -24,6 +24,7 @@ import { registerGetConsoleLogsTool } from "./get-console-logs.js";
 import { registerGetErrorsTool } from "./get-errors.js";
 import { registerGetNetworkLogsTool } from "./get-network-logs.js";
 import { registerGetProcessOutputTool } from "./get-process-output.js";
+import { registerRunWorkflowTool } from "./run-workflow.js";
 
 /**
  * Register all MCP tools with the server
@@ -163,5 +164,8 @@ export function registerTools(
   // Tool 22: get_process_output
   registerGetProcessOutputTool(server, sessionManager);
 
-  console.error("Registered 22 MCP tools");
+  // Tool 23: run_workflow
+  registerRunWorkflowTool(server, sessionManager);
+
+  console.error("Registered 23 MCP tools");
 }
