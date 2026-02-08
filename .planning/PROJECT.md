@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An MCP server for Claude Code that gives it eyes and hands for GUI development. It launches web apps, Electron apps, and Windows desktop applications, captures screenshots, interacts with the UI (click, type, navigate, read state), captures errors and logs, and runs multi-step QA workflows with assertions. Claude can autonomously build, see, interact with, and verify GUI applications.
+An MCP server for Claude Code that gives it eyes and hands for GUI development. It launches web apps, Electron apps, and Windows desktop applications, captures screenshots, interacts with the UI (click, type, navigate, read state), captures errors and logs, and runs multi-step QA workflows with assertions. All 23 MCP tools are tested end-to-end with 99 automated tests.
 
 ## Core Value
 
@@ -20,6 +20,15 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 - Run multi-step QA workflows: execute a sequence of interactions and verify outcomes at each step — v1.0
 - Report QA results as pass/fail with screenshot evidence at each step — v1.0
 - Installable as npm package with simple MCP config setup — v1.0
+- Automated test suite (vitest) with tests for all 23 MCP tools — v1.1
+- Integration tests exercising cross-tool flows (launch -> screenshot -> interact -> verify) — v1.1
+- Test fixtures: sample web, Electron, and Windows apps for testing against — v1.1
+- All session management tools verified (get_version, create/list/end_session) — v1.1
+- All process lifecycle tools verified (check_port, launch_web/electron/exe, stop_process) — v1.1
+- All screenshot tools verified (screenshot_web/electron/desktop, get_screenshot) — v1.1
+- All UI interaction tools verified (click, type, navigate, get_state, wait) — v1.1
+- All diagnostic tools verified (console_logs, errors, network_logs, process_output) — v1.1
+- Workflow engine and all 13 assertion types verified — v1.1
 
 ### Active
 
@@ -38,29 +47,20 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 - Video recording — storage intensive; strategic screenshots at checkpoints provide 80% value
 - Cloud browser grid — scope creep; BrowserStack exists for this
 
-## Current Milestone: v1.1 Stabilization
-
-**Goal:** Systematically test every MCP tool, identify failures, and fix all broken functionality.
-
-**Target features:**
-- Test all 23 MCP tools end-to-end with real applications
-- Fix Electron screenshot and other known broken tools
-- Ensure all tool categories work: sessions, process lifecycle, screenshots, interaction, diagnostics, workflows
-- Validate cross-tool flows (launch → screenshot → interact → verify)
-
 ## Context
 
-Shipped v1.0 with 5,009 lines of TypeScript across 44 source files.
-Tech stack: TypeScript/Node.js, MCP SDK, Playwright, Sharp, node-screenshots.
+Shipped v1.1 with 8,749 lines of TypeScript across 48+ files.
+Tech stack: TypeScript/Node.js, MCP SDK, Playwright, Sharp, node-screenshots, vitest.
 23 MCP tools covering sessions, process management, screenshots, UI interaction, error capture, workflows, and assertions.
-Built in 2 days (Feb 5-7, 2026) across 8 phases and 22 plans.
-Multiple tools discovered broken post-launch — v1.1 focuses on stabilization before adding new features.
+99 automated tests across 24 test files with 3 fixture apps.
+Built across 2 milestones: v1.0 (Feb 5-7) and v1.1 (Feb 7-8, 2026).
+All tools verified working end-to-end. 3 bugs found and fixed during v1.1 stabilization.
 
 ## Constraints
 
 - **Tech stack**: TypeScript/Node for the MCP server — best MCP SDK support and Playwright is native to this ecosystem
 - **Platform**: Must work on Windows (C# desktop support requires it), should also work on macOS/Linux for web/Electron
-- **Distribution**: npm package named `feedback` — lowest friction for Claude Code users
+- **Distribution**: npm package named `auto-feedback` — lowest friction for Claude Code users
 - **MCP Protocol**: Must conform to the MCP server specification so Claude Code can discover and call tools
 - **Performance**: Screenshots and interactions must be fast enough for iterative development (sub-second for screenshots, quick element interaction)
 
@@ -82,6 +82,11 @@ Multiple tools discovered broken post-launch — v1.1 focuses on stabilization b
 | Dual readiness (stdout + TCP polling) | Fast for Vite/Next; reliable TCP fallback | Good |
 | Flat Zod schema for workflow steps | Simpler for LLM callers than discriminated unions | Good |
 | Assertion failures return {passed:false} | Assertions expected to fail; exceptions for unexpected errors only | Good |
+| vitest 4.0 with forks pool | Process isolation for test reliability | Good |
+| In-memory MCP test client | Bypass stdio transport for faster, more reliable tests | Good |
+| Polling-based window detection | Replaced flaky 2s sleep with 500ms polling, 10s timeout | Good |
+| Collectors attach before page.goto() | Captures initial page load events without workarounds | Good |
+| rekeyIdentifier for atomic map re-keying | Consistent page ref and collector map keys after navigate | Good |
 
 ---
-*Last updated: 2026-02-07 after v1.1 milestone start*
+*Last updated: 2026-02-08 after v1.1 milestone*
