@@ -38,12 +38,23 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 - Video recording — storage intensive; strategic screenshots at checkpoints provide 80% value
 - Cloud browser grid — scope creep; BrowserStack exists for this
 
+## Current Milestone: v1.1 Stabilization
+
+**Goal:** Systematically test every MCP tool, identify failures, and fix all broken functionality.
+
+**Target features:**
+- Test all 23 MCP tools end-to-end with real applications
+- Fix Electron screenshot and other known broken tools
+- Ensure all tool categories work: sessions, process lifecycle, screenshots, interaction, diagnostics, workflows
+- Validate cross-tool flows (launch → screenshot → interact → verify)
+
 ## Context
 
 Shipped v1.0 with 5,009 lines of TypeScript across 44 source files.
 Tech stack: TypeScript/Node.js, MCP SDK, Playwright, Sharp, node-screenshots.
 23 MCP tools covering sessions, process management, screenshots, UI interaction, error capture, workflows, and assertions.
 Built in 2 days (Feb 5-7, 2026) across 8 phases and 22 plans.
+Multiple tools discovered broken post-launch — v1.1 focuses on stabilization before adding new features.
 
 ## Constraints
 
@@ -73,4 +84,4 @@ Built in 2 days (Feb 5-7, 2026) across 8 phases and 22 plans.
 | Assertion failures return {passed:false} | Assertions expected to fail; exceptions for unexpected errors only | Good |
 
 ---
-*Last updated: 2026-02-07 after v1.0 milestone*
+*Last updated: 2026-02-07 after v1.1 milestone start*
