@@ -6,24 +6,12 @@
 
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { createTestClient, TestContext } from "../../helpers/mcp-test-client.js";
+import { parseToolResult } from "../../helpers/parse-tool-result.js";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-/** Parse JSON from MCP tool result, throw if isError */
-function parseToolResult(result: { isError?: boolean; content: unknown }): Record<string, unknown> {
-  if (result.isError) {
-    const text = (result.content as Array<{ type: string; text: string }>)[0]?.text ?? "Unknown error";
-    throw new Error(`Tool returned error: ${text}`);
-  }
-  const textContent = (result.content as Array<{ type: string; text: string }>).find(
-    (c) => c.type === "text"
-  );
-  if (!textContent) throw new Error("No text content in result");
-  return JSON.parse(textContent.text);
-}
 
 describe("Session Management Tools", () => {
   let ctx: TestContext;

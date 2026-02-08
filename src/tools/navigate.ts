@@ -115,16 +115,14 @@ export function registerNavigateTool(
             timeout: effectiveTimeout,
           });
 
-          // Update PageReference URL in SessionManager for web pages
-          // so page discovery continues to work with the new URL
+          // Re-key page ref AND all collector maps atomically
+          // so page discovery and diagnostic lookups work with the new URL
           if (pageType === "web" && currentIdentifier !== "electron") {
-            const oldRef = sessionManager.getPageRef(sessionId, currentIdentifier);
-            if (oldRef) {
-              sessionManager.removePageRef(sessionId, currentIdentifier);
-              sessionManager.setPageRef(sessionId, url!, {
-                ...oldRef,
-                url: url!,
-              });
+            sessionManager.rekeyIdentifier(sessionId, currentIdentifier, url!);
+            // Update the URL field in the re-keyed page ref
+            const updatedRef = sessionManager.getPageRef(sessionId, url!);
+            if (updatedRef) {
+              updatedRef.url = url!;
             }
           }
         } else if (action === "back") {

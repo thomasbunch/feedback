@@ -7,21 +7,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestClient, TestContext } from "../helpers/mcp-test-client.js";
 import { WEB_FIXTURE_DIR, WEB_PORT } from "../helpers/fixtures.js";
-
-/** Parse the text content from an MCP tool result */
-function parseToolResult(result: any): any {
-  if (result.isError) {
-    const errorText = result.content?.[0]?.text ?? "Unknown error";
-    throw new Error(`Tool returned error: ${errorText}`);
-  }
-  const text = result.content?.[0]?.text;
-  if (!text) throw new Error("No text content in tool result");
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+import { parseToolResult } from "../helpers/parse-tool-result.js";
 
 describe("Web flow integration", () => {
   let ctx: TestContext;
@@ -37,7 +23,7 @@ describe("Web flow integration", () => {
       arguments: {},
     });
     const sessionData = parseToolResult(sessionResult);
-    sessionId = sessionData.sessionId;
+    sessionId = sessionData.sessionId as string;
     expect(sessionId).toBeTruthy();
 
     // Launch web server
@@ -140,11 +126,12 @@ describe("Web flow integration", () => {
       },
     });
     const data = parseToolResult(result);
-    expect(data.entries).toBeDefined();
-    expect(data.entries.length).toBeGreaterThan(0);
+    const entries = data.entries as Array<Record<string, unknown>>;
+    expect(entries).toBeDefined();
+    expect(entries.length).toBeGreaterThan(0);
 
     // The fixture logs "Fixture app loaded" on startup
-    const messages = data.entries.map((e: any) => e.text ?? e.message ?? "");
+    const messages = entries.map((e) => (e.text as string) ?? (e.message as string) ?? "");
     const hasFixtureLog = messages.some((m: string) =>
       m.includes("Fixture app loaded")
     );

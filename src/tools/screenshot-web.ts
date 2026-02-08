@@ -81,9 +81,7 @@ export function registerScreenshotWebTool(
           });
           const page = await context.newPage();
 
-          await page.goto(url, { waitUntil: "load", timeout: 30000 });
-
-          // Store page reference for reuse
+          // Store page reference before goto (URL is known from parameter)
           pageRef = {
             type: "web",
             page,
@@ -96,7 +94,7 @@ export function registerScreenshotWebTool(
           // Attach auto-capture on navigation
           setupAutoCapture(page, sessionId, sessionManager);
 
-          // Attach diagnostic collectors
+          // Attach diagnostic collectors BEFORE goto so initial load events are captured
           const consoleCollector = attachConsoleCollector(page);
           const errorCollector = attachErrorCollector(page);
           const networkCollector = attachNetworkCollector(page);
@@ -115,6 +113,9 @@ export function registerScreenshotWebTool(
               await browser.close().catch(() => {});
             },
           });
+
+          // Navigate AFTER collectors are attached to capture all initial load events
+          await page.goto(url, { waitUntil: "load", timeout: 30000 });
 
           console.error(`[screenshot_web] Browser ready for ${url}`);
         } else {

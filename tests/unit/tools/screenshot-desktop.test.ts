@@ -1,14 +1,7 @@
 import { spawn, ChildProcess } from "child_process";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestClient, TestContext } from "../../helpers/mcp-test-client.js";
-
-/** Parse the JSON text from an MCP tool result */
-function parseToolResult(result: { content: unknown }): Record<string, unknown> {
-  const content = result.content as Array<{ type: string; text: string }>;
-  const textEntry = content.find((c) => c.type === "text");
-  if (!textEntry) throw new Error("No text content in tool result");
-  return JSON.parse(textEntry.text);
-}
+import { parseToolResult } from "../../helpers/parse-tool-result.js";
 
 describe("screenshot_desktop", () => {
   let ctx: TestContext;
@@ -41,8 +34,25 @@ describe("screenshot_desktop", () => {
     }
     notepadPid = notepadProcess.pid;
 
-    // Wait for notepad window to appear
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Poll for notepad window to appear (replaces flaky fixed 2s wait)
+    const pollIntervalMs = 500;
+    const maxWaitMs = 10_000;
+    let windowFound = false;
+    for (let elapsed = 0; elapsed < maxWaitMs; elapsed += pollIntervalMs) {
+      const { Window } = await import("node-screenshots");
+      const windows = Window.all();
+      const notepadWindow = windows.find(
+        (w) => w.appName.toLowerCase().includes("notepad") && !w.isMinimized
+      );
+      if (notepadWindow) {
+        windowFound = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+    if (!windowFound) {
+      throw new Error("Notepad window did not appear within 10 seconds");
+    }
   }, 30_000);
 
   afterAll(async () => {

@@ -11,21 +11,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import path from "path";
 import { createTestClient, TestContext } from "../helpers/mcp-test-client.js";
 import { ELECTRON_FIXTURE_DIR } from "../helpers/fixtures.js";
-
-/** Parse the text content from an MCP tool result */
-function parseToolResult(result: any): any {
-  if (result.isError) {
-    const errorText = result.content?.[0]?.text ?? "Unknown error";
-    throw new Error(`Tool returned error: ${errorText}`);
-  }
-  const text = result.content?.[0]?.text;
-  if (!text) throw new Error("No text content in tool result");
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+import { parseToolResult } from "../helpers/parse-tool-result.js";
 
 describe("Electron flow integration", () => {
   let ctx: TestContext;
@@ -40,7 +26,7 @@ describe("Electron flow integration", () => {
       arguments: {},
     });
     const sessionData = parseToolResult(sessionResult);
-    sessionId = sessionData.sessionId;
+    sessionId = sessionData.sessionId as string;
     expect(sessionId).toBeTruthy();
 
     // Launch Electron app

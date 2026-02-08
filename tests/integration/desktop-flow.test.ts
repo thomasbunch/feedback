@@ -8,21 +8,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import path from "path";
 import { createTestClient, TestContext } from "../helpers/mcp-test-client.js";
 import { WIN_FIXTURE_DIR, WIN_PORT } from "../helpers/fixtures.js";
-
-/** Parse the text content from an MCP tool result */
-function parseToolResult(result: any): any {
-  if (result.isError) {
-    const errorText = result.content?.[0]?.text ?? "Unknown error";
-    throw new Error(`Tool returned error: ${errorText}`);
-  }
-  const text = result.content?.[0]?.text;
-  if (!text) throw new Error("No text content in tool result");
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
+import { parseToolResult } from "../helpers/parse-tool-result.js";
 
 describe("Desktop flow integration", () => {
   let ctx: TestContext;
@@ -37,7 +23,7 @@ describe("Desktop flow integration", () => {
       arguments: {},
     });
     const sessionData = parseToolResult(sessionResult);
-    sessionId = sessionData.sessionId;
+    sessionId = sessionData.sessionId as string;
     expect(sessionId).toBeTruthy();
 
     // Launch Windows fixture (node.exe running server.js)
@@ -117,7 +103,7 @@ describe("Desktop flow integration", () => {
       arguments: {},
     });
     const sessionData = parseToolResult(sessionResult);
-    const newSessionId = sessionData.sessionId;
+    const newSessionId = sessionData.sessionId as string;
 
     try {
       // Launch the server again
@@ -143,12 +129,13 @@ describe("Desktop flow integration", () => {
         arguments: { sessionId: newSessionId },
       });
       const outputData = parseToolResult(outputResult);
-      expect(outputData.entries).toBeDefined();
-      expect(outputData.entries.length).toBeGreaterThan(0);
+      const entries = outputData.entries as Array<Record<string, unknown>>;
+      expect(entries).toBeDefined();
+      expect(entries.length).toBeGreaterThan(0);
 
       // Check for expected stdout message
-      const texts = outputData.entries.map(
-        (e: any) => e.text ?? e.data ?? ""
+      const texts = entries.map(
+        (e) => (e.text as string) ?? (e.data as string) ?? ""
       );
       const hasListeningMsg = texts.some((t: string) =>
         t.includes(`Win fixture listening on ${WIN_PORT}`)

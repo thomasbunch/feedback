@@ -2,14 +2,7 @@ import path from "path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestClient, TestContext } from "../../helpers/mcp-test-client.js";
 import { ELECTRON_FIXTURE_DIR } from "../../helpers/fixtures.js";
-
-/** Parse the JSON text from an MCP tool result */
-function parseToolResult(result: { content: unknown }): Record<string, unknown> {
-  const content = result.content as Array<{ type: string; text: string }>;
-  const textEntry = content.find((c) => c.type === "text");
-  if (!textEntry) throw new Error("No text content in tool result");
-  return JSON.parse(textEntry.text);
-}
+import { parseToolResult } from "../../helpers/parse-tool-result.js";
 
 describe("screenshot_electron", () => {
   let ctx: TestContext;

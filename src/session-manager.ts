@@ -108,6 +108,39 @@ export class SessionManager {
   }
 
   /**
+   * Re-key all Maps associated with a page identifier.
+   * Used by navigate when goto changes the page URL.
+   * Updates: pageRefs, consoleCollectors, errorCollectors, networkCollectors, processCollectors.
+   * No-op for entries that don't exist under the old key.
+   */
+  rekeyIdentifier(sessionId: string, oldIdentifier: string, newIdentifier: string): void {
+    const oldKey = `${sessionId}:${oldIdentifier}`;
+    const newKey = `${sessionId}:${newIdentifier}`;
+
+    // Re-key page ref
+    const pageRef = this.pageRefs.get(oldKey);
+    if (pageRef) {
+      this.pageRefs.delete(oldKey);
+      this.pageRefs.set(newKey, pageRef);
+    }
+
+    // Re-key all collector maps (silently skip if old key not present)
+    const maps: Map<string, unknown>[] = [
+      this.consoleCollectors,
+      this.errorCollectors,
+      this.networkCollectors,
+      this.processCollectors,
+    ];
+    for (const map of maps) {
+      const value = map.get(oldKey);
+      if (value) {
+        map.delete(oldKey);
+        map.set(newKey, value);
+      }
+    }
+  }
+
+  /**
    * Store the latest auto-captured screenshot for a session
    */
   setAutoCapture(sessionId: string, data: AutoCaptureData): void {

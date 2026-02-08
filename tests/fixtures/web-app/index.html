@@ -14,19 +14,24 @@
 <body>
   <h1 id="heading">Hello Fixture</h1>
 
-  <button id="click-me">Click Me</button>
+  <button id="click-me" data-testid="click-btn">Click Me</button>
   <button id="show-hidden">Show Hidden</button>
   <button id="throw-error">Throw Error</button>
   <button id="fetch-data">Fetch Data</button>
 
   <br />
-  <input id="text-input" type="text" placeholder="Type here" />
+  <input id="text-input" type="text" placeholder="Type here" data-testid="text-field" />
 
   <div id="output"></div>
 
   <div id="hidden-element" style="display:none">Hidden</div>
 
   <a id="nav-link" href="/page2.html">Go to Page 2</a>
+
+  <br />
+  <input type="checkbox" id="test-checkbox" data-testid="checkbox" />
+  <label for="test-checkbox">Test Checkbox</label>
+  <button id="disabled-btn" disabled>Disabled Button</button>
 
   <script type="module" src="/src/main.ts"></script>
 </body>
