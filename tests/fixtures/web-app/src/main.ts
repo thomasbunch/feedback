@@ -34,3 +34,29 @@ document.getElementById("fetch-data")!.addEventListener("click", () => {
 console.log("Fixture app loaded");
 console.warn("Fixture warning");
 console.error("Fixture error");
+
+// Select handler -- exercises select_option tool
+document.getElementById("color-select")!.addEventListener("change", (e) => {
+  const select = e.target as HTMLSelectElement;
+  output.textContent = `Selected: ${select.value}`;
+});
+
+// Hover handler -- exercises hover_element tool
+document.getElementById("hover-target")!.addEventListener("mouseenter", () => {
+  document.getElementById("tooltip")!.style.display = "block";
+});
+document.getElementById("hover-target")!.addEventListener("mouseleave", () => {
+  document.getElementById("tooltip")!.style.display = "none";
+});
+
+// File input handler -- exercises file_upload tool
+document.getElementById("file-input")!.addEventListener("change", (e) => {
+  const input = e.target as HTMLInputElement;
+  const names = Array.from(input.files || []).map(f => f.name).join(", ");
+  document.getElementById("file-status")!.textContent = `Files: ${names}`;
+});
+document.getElementById("multi-file-input")!.addEventListener("change", (e) => {
+  const input = e.target as HTMLInputElement;
+  const names = Array.from(input.files || []).map(f => f.name).join(", ");
+  document.getElementById("file-status")!.textContent = `Multi: ${names}`;
+});

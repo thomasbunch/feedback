@@ -33,6 +33,40 @@
   <label for="test-checkbox">Test Checkbox</label>
   <button id="disabled-btn" disabled>Disabled Button</button>
 
+  <!-- Phase 15: Interaction primitives test elements -->
+  <br />
+  <label for="color-select">Color:</label>
+  <select id="color-select" data-testid="color-dropdown">
+    <option value="">Choose...</option>
+    <option value="red">Red</option>
+    <option value="green">Green</option>
+    <option value="blue">Blue</option>
+  </select>
+
+  <div id="hover-target" data-testid="hover-target" style="display:inline-block;padding:10px;margin:5px;border:1px solid #999;cursor:pointer;position:relative;">
+    Hover Me
+    <div id="tooltip" style="display:none;position:absolute;top:100%;left:0;background:#333;color:#fff;padding:5px 10px;border-radius:4px;white-space:nowrap;">Tooltip text</div>
+  </div>
+
+  <div id="scroll-container" data-testid="scroll-container" style="height:150px;overflow-y:auto;border:1px solid #ccc;margin:10px 0;padding:10px;">
+    <div style="height:800px;">
+      <p id="scroll-top-marker">Top of scroll</p>
+      <div style="height:350px;"></div>
+      <p id="scroll-middle-marker">Middle of scroll</p>
+      <div style="height:350px;"></div>
+      <p id="scroll-bottom-marker">Bottom of scroll</p>
+    </div>
+  </div>
+
+  <input type="file" id="file-input" data-testid="file-input" />
+  <input type="file" id="multi-file-input" data-testid="multi-file-input" multiple />
+  <div id="file-status"></div>
+
+  <div id="content-block" data-testid="content-block">
+    <p>This is <strong>sample content</strong> for text extraction.</p>
+    <ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>
+  </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
