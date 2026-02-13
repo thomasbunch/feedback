@@ -39,6 +39,9 @@ import { registerGetPageContentTool } from "./get-page-content.js";
 import { registerFileUploadTool } from "./file-upload.js";
 import { registerEvaluateJavascriptTool } from "./evaluate-javascript.js";
 import { registerHandleDialogTool } from "./handle-dialog.js";
+import { registerResizeViewportTool } from "./resize-viewport.js";
+import { registerWaitForConditionTool } from "./wait-for-condition.js";
+import { registerManageStorageTool } from "./manage-storage.js";
 
 /**
  * Register all MCP tools with the server
@@ -206,7 +209,16 @@ export function registerTools(
   // Tool 31: handle_dialog
   registerHandleDialogTool(server, sessionManager);
 
+  // Tool 32: resize_viewport
+  registerResizeViewportTool(server, sessionManager);
+
+  // Tool 33: wait_for_condition
+  registerWaitForConditionTool(server, sessionManager);
+
+  // Tool 34: manage_storage
+  registerManageStorageTool(server, sessionManager);
+
   // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
 
-  console.error("Registered 31 MCP tools");
+  console.error("Registered 34 MCP tools");
 }
