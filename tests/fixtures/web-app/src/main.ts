@@ -60,3 +60,32 @@ document.getElementById("multi-file-input")!.addEventListener("change", (e) => {
   const names = Array.from(input.files || []).map(f => f.name).join(", ");
   document.getElementById("file-status")!.textContent = `Multi: ${names}`;
 });
+
+// Phase 16: Dialog triggers -- exercises handle_dialog tool
+document.getElementById("trigger-alert")!.addEventListener("click", () => {
+  alert("Test alert message");
+});
+document.getElementById("trigger-confirm")!.addEventListener("click", () => {
+  const result = confirm("Test confirm message");
+  output.textContent = `Confirm: ${result}`;
+});
+document.getElementById("trigger-prompt")!.addEventListener("click", () => {
+  const result = prompt("Test prompt message", "default value");
+  output.textContent = `Prompt: ${result}`;
+});
+
+// Async loading simulation -- exercises wait_for_condition tool
+document.getElementById("trigger-async")!.addEventListener("click", () => {
+  setTimeout(() => {
+    document.getElementById("async-result")!.style.display = "block";
+    document.getElementById("async-result")!.textContent = "Async loaded";
+  }, 500);
+});
+
+// Responsive info display -- exercises resize_viewport tool
+const responsiveInfoEl = document.getElementById("responsive-info")!;
+const updateResponsiveInfo = () => {
+  responsiveInfoEl.textContent = `${window.innerWidth}x${window.innerHeight}`;
+};
+updateResponsiveInfo();
+window.addEventListener("resize", updateResponsiveInfo);
