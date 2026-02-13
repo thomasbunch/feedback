@@ -37,6 +37,8 @@ import { registerHoverElementTool } from "./hover-element.js";
 import { registerScrollTool } from "./scroll.js";
 import { registerGetPageContentTool } from "./get-page-content.js";
 import { registerFileUploadTool } from "./file-upload.js";
+import { registerEvaluateJavascriptTool } from "./evaluate-javascript.js";
+import { registerHandleDialogTool } from "./handle-dialog.js";
 
 /**
  * Register all MCP tools with the server
@@ -198,7 +200,13 @@ export function registerTools(
   // Tool 29: file_upload
   registerFileUploadTool(server, sessionManager);
 
+  // Tool 30: evaluate_javascript
+  registerEvaluateJavascriptTool(server, sessionManager);
+
+  // Tool 31: handle_dialog
+  registerHandleDialogTool(server, sessionManager);
+
   // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
 
-  console.error("Registered 29 MCP tools");
+  console.error("Registered 31 MCP tools");
 }
