@@ -35,6 +35,8 @@ import { registerSelectOptionTool } from "./select-option.js";
 import { registerPressKeyTool } from "./press-key.js";
 import { registerHoverElementTool } from "./hover-element.js";
 import { registerScrollTool } from "./scroll.js";
+import { registerGetPageContentTool } from "./get-page-content.js";
+import { registerFileUploadTool } from "./file-upload.js";
 
 /**
  * Register all MCP tools with the server
@@ -190,5 +192,13 @@ export function registerTools(
   // Tool 27: scroll
   registerScrollTool(server, sessionManager);
 
-  console.error("Registered 27 MCP tools");
+  // Tool 28: get_page_content
+  registerGetPageContentTool(server, sessionManager);
+
+  // Tool 29: file_upload
+  registerFileUploadTool(server, sessionManager);
+
+  // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
+
+  console.error("Registered 29 MCP tools");
 }

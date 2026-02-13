@@ -130,4 +130,48 @@ describe("screenshot_web", () => {
     const text = content.find((c) => c.type === "text")?.text ?? "";
     expect(text).toContain("Failed");
   }, 30_000);
+
+  it("captures element screenshot with selector", async () => {
+    const result = await ctx.client.callTool({
+      name: "screenshot_web",
+      arguments: {
+        sessionId,
+        url: `http://localhost:${WEB_PORT}`,
+        selector: "#heading",
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+
+    const content = result.content as any[];
+    expect(content.length).toBe(2);
+
+    // Verify image is present
+    const imageContent = content.find((c: any) => c.type === "image");
+    expect(imageContent).toBeDefined();
+
+    // Parse metadata and verify element mode
+    const metadata = JSON.parse(content[0].text);
+    expect(metadata.mode).toBe("element");
+    expect(metadata.selector).toBe("#heading");
+    expect(metadata.width).toBeGreaterThan(0);
+    expect(metadata.height).toBeGreaterThan(0);
+  }, 30_000);
+
+  it("returns error when selector combined with fullPage", async () => {
+    const result = await ctx.client.callTool({
+      name: "screenshot_web",
+      arguments: {
+        sessionId,
+        url: `http://localhost:${WEB_PORT}`,
+        selector: "#heading",
+        fullPage: true,
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    const content = result.content as Array<{ type: string; text: string }>;
+    const text = content.find((c) => c.type === "text")?.text ?? "";
+    expect(text).toContain("Cannot combine");
+  });
 });
