@@ -31,6 +31,10 @@ import { registerGetErrorsTool } from "./get-errors.js";
 import { registerGetNetworkLogsTool } from "./get-network-logs.js";
 import { registerGetProcessOutputTool } from "./get-process-output.js";
 import { registerRunWorkflowTool } from "./run-workflow.js";
+import { registerSelectOptionTool } from "./select-option.js";
+import { registerPressKeyTool } from "./press-key.js";
+import { registerHoverElementTool } from "./hover-element.js";
+import { registerScrollTool } from "./scroll.js";
 
 /**
  * Register all MCP tools with the server
@@ -174,5 +178,17 @@ export function registerTools(
   // Tool 23: run_workflow
   registerRunWorkflowTool(server, sessionManager);
 
-  console.error("Registered 23 MCP tools");
+  // Tool 24: select_option
+  registerSelectOptionTool(server, sessionManager);
+
+  // Tool 25: press_key
+  registerPressKeyTool(server, sessionManager);
+
+  // Tool 26: hover_element
+  registerHoverElementTool(server, sessionManager);
+
+  // Tool 27: scroll
+  registerScrollTool(server, sessionManager);
+
+  console.error("Registered 27 MCP tools");
 }
