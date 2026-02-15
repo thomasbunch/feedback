@@ -93,6 +93,13 @@
     </div>
   </div>
 
+  <!-- Phase 19: Advanced Interactions test elements -->
+  <div id="drag-drop-zone" style="display:flex;gap:20px;margin:10px 0;">
+    <div id="drag-source" draggable="true" data-testid="drag-source" style="width:80px;height:80px;background:#4CAF50;color:white;display:flex;align-items:center;justify-content:center;cursor:grab;border-radius:4px;">Drag me</div>
+    <div id="drop-target" data-testid="drop-target" style="width:120px;height:80px;border:2px dashed #999;display:flex;align-items:center;justify-content:center;border-radius:4px;">Drop here</div>
+  </div>
+  <div id="drag-status"></div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

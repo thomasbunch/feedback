@@ -46,6 +46,7 @@ import { registerAuditAccessibilityTool } from "./audit-accessibility.js";
 import { registerGetAccessibilityTreeTool } from "./get-accessibility-tree.js";
 import { registerCompareScreenshotsTool } from "./compare-screenshots.js";
 import { registerGetCssPropertyTool } from "./get-css-property.js";
+import { registerDragDropTool } from "./drag-drop.js";
 
 /**
  * Register all MCP tools with the server
@@ -242,7 +243,10 @@ export function registerTools(
   // Tool 38: get_css_property
   registerGetCssPropertyTool(server, sessionManager);
 
+  // Tool 39: drag_drop
+  registerDragDropTool(server, sessionManager);
+
   // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
 
-  console.error("Registered 38 MCP tools");
+  console.error("Registered 39 MCP tools");
 }

@@ -89,3 +89,19 @@ const updateResponsiveInfo = () => {
 };
 updateResponsiveInfo();
 window.addEventListener("resize", updateResponsiveInfo);
+
+// Phase 19: Drag-and-drop handlers -- exercises drag_drop tool
+document.getElementById("drag-source")!.addEventListener("dragstart", (e) => {
+  (e as DragEvent).dataTransfer!.setData("text/plain", "dragged");
+});
+document.getElementById("drop-target")!.addEventListener("dragover", (e) => {
+  e.preventDefault();
+});
+document.getElementById("drop-target")!.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const target = e.currentTarget as HTMLElement;
+  target.textContent = "Dropped!";
+  target.style.background = "#4CAF50";
+  target.style.borderStyle = "solid";
+  document.getElementById("drag-status")!.textContent = "Drop successful";
+});
