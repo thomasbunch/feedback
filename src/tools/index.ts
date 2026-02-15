@@ -42,6 +42,8 @@ import { registerHandleDialogTool } from "./handle-dialog.js";
 import { registerResizeViewportTool } from "./resize-viewport.js";
 import { registerWaitForConditionTool } from "./wait-for-condition.js";
 import { registerManageStorageTool } from "./manage-storage.js";
+import { registerAuditAccessibilityTool } from "./audit-accessibility.js";
+import { registerGetAccessibilityTreeTool } from "./get-accessibility-tree.js";
 
 /**
  * Register all MCP tools with the server
@@ -218,7 +220,13 @@ export function registerTools(
   // Tool 34: manage_storage
   registerManageStorageTool(server, sessionManager);
 
+  // Tool 35: audit_accessibility
+  registerAuditAccessibilityTool(server, sessionManager);
+
+  // Tool 36: get_accessibility_tree
+  registerGetAccessibilityTreeTool(server, sessionManager);
+
   // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
 
-  console.error("Registered 34 MCP tools");
+  console.error("Registered 36 MCP tools");
 }
