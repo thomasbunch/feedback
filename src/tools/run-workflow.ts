@@ -26,7 +26,7 @@ export function registerRunWorkflowTool(
 ): void {
   server.tool(
     "run_workflow",
-    "Execute a multi-step workflow on a web or Electron page. Runs actions in sequence, captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, or multi-step UI verification with pass/fail assertions.",
+    "Execute a multi-step workflow on a web or Electron page. Runs actions in sequence (click, type, navigate, screenshot, wait, assert, select, press, hover, scroll, evaluate, upload, drag), captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, drag-and-drop, keyboard interactions, or multi-step UI verification with pass/fail assertions.",
     {
       sessionId: z
         .string()
@@ -35,7 +35,10 @@ export function registerRunWorkflowTool(
         .array(
           z.object({
             action: z
-              .enum(["click", "type", "navigate", "screenshot", "wait", "assert"])
+              .enum([
+                "click", "type", "navigate", "screenshot", "wait", "assert",
+                "select", "press", "hover", "scroll", "evaluate", "upload", "drag",
+              ])
               .describe("Action to perform"),
             selector: z
               .string()
@@ -103,16 +106,22 @@ export function registerRunWorkflowTool(
                 "checked",
                 "not-checked",
                 "value-equals",
+                "css-equals",
+                "url-equals",
+                "url-contains",
+                "title-equals",
+                "count-equals",
+                "a11y-passes",
               ])
               .optional()
               .describe(
-                "Assertion type (required for assert action). Checks element state and reports pass/fail."
+                "Assertion type (required for assert action). Element-level: exists, not-exists, visible, hidden, text-equals, text-contains, has-attribute, attribute-equals, enabled, disabled, checked, not-checked, value-equals, css-equals, count-equals. Page-level (no selector needed): url-equals, url-contains, title-equals, a11y-passes."
               ),
             expected: z
               .string()
               .optional()
               .describe(
-                "Expected value for text-equals, text-contains, value-equals, attribute-equals assertions"
+                "Expected value for text-equals, text-contains, value-equals, attribute-equals, css-equals, url-equals, url-contains, title-equals, count-equals assertions"
               ),
             attribute: z
               .string()
@@ -120,6 +129,80 @@ export function registerRunWorkflowTool(
               .describe(
                 "Attribute name for has-attribute, attribute-equals assertions"
               ),
+            value: z
+              .string()
+              .optional()
+              .describe("Option value for select action"),
+            label: z
+              .string()
+              .optional()
+              .describe("Option label text for select action"),
+            index: z
+              .number()
+              .int()
+              .min(0)
+              .optional()
+              .describe("Option index (zero-based) for select action"),
+            key: z
+              .string()
+              .optional()
+              .describe(
+                "Key name or combination for press action (e.g. Enter, Control+A, Shift+Tab)"
+              ),
+            position: z
+              .object({ x: z.number(), y: z.number() })
+              .optional()
+              .describe("Position within element for hover action"),
+            force: z
+              .boolean()
+              .optional()
+              .describe(
+                "Force action past actionability checks (hover, drag)"
+              ),
+            direction: z
+              .enum(["up", "down", "left", "right"])
+              .optional()
+              .describe("Scroll direction"),
+            amount: z
+              .number()
+              .int()
+              .min(1)
+              .optional()
+              .describe("Pixels to scroll (default: 500)"),
+            scrollTo: z
+              .enum(["top", "bottom"])
+              .optional()
+              .describe("Scroll to absolute position"),
+            expression: z
+              .string()
+              .optional()
+              .describe(
+                "JavaScript expression for evaluate action (return value discarded in workflow context)"
+              ),
+            files: z
+              .array(z.string())
+              .optional()
+              .describe("Absolute file paths for upload action"),
+            sourceSelector: z
+              .string()
+              .optional()
+              .describe("Source element selector for drag action"),
+            targetSelector: z
+              .string()
+              .optional()
+              .describe("Target element selector for drag action"),
+            sourcePosition: z
+              .object({ x: z.number(), y: z.number() })
+              .optional()
+              .describe("Position within source element for drag"),
+            targetPosition: z
+              .object({ x: z.number(), y: z.number() })
+              .optional()
+              .describe("Position within target element for drag"),
+            property: z
+              .string()
+              .optional()
+              .describe("CSS property name for css-equals assertion"),
           })
         )
         .min(1)

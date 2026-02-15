@@ -15,13 +15,33 @@ import type { ConsoleEntry, ErrorEntry } from "../capture/types.js";
  * - navigate: url
  * - wait: selector
  * - screenshot: (no required fields)
- * - assert: selector, assertType (plus expected/attribute depending on assertType)
+ * - assert: selector (unless page-level assertion), assertType (plus expected/attribute depending on assertType)
+ * - select: selector, exactly one of value/label/index
+ * - press: key (selector optional — targets page keyboard if omitted)
+ * - hover: selector
+ * - scroll: at least one of selector, direction, scrollTo
+ * - evaluate: expression
+ * - upload: selector, files (non-empty array)
+ * - drag: sourceSelector, targetSelector
  */
 export interface WorkflowStep {
   /** Action to perform */
-  action: "click" | "type" | "navigate" | "screenshot" | "wait" | "assert";
+  action:
+    | "click"
+    | "type"
+    | "navigate"
+    | "screenshot"
+    | "wait"
+    | "assert"
+    | "select"
+    | "press"
+    | "hover"
+    | "scroll"
+    | "evaluate"
+    | "upload"
+    | "drag";
 
-  /** Element selector — required for click, type, wait */
+  /** Element selector — required for click, type, wait, select, hover, upload */
   selector?: string;
 
   /** Text to type — required for type action */
@@ -62,7 +82,13 @@ export interface WorkflowStep {
     | "disabled"
     | "checked"
     | "not-checked"
-    | "value-equals";
+    | "value-equals"
+    | "css-equals"
+    | "url-equals"
+    | "url-contains"
+    | "title-equals"
+    | "count-equals"
+    | "a11y-passes";
 
   /** Expected value for text/attribute assertions */
   expected?: string;
@@ -72,6 +98,54 @@ export interface WorkflowStep {
 
   /** Per-step timeout in ms (default: 30000) */
   timeout?: number;
+
+  /** Select option by value attribute */
+  value?: string;
+
+  /** Select option by visible label text */
+  label?: string;
+
+  /** Select option by zero-based index */
+  index?: number;
+
+  /** Key name or combination for press action (e.g. "Enter", "Control+A") */
+  key?: string;
+
+  /** Position within element for hover action */
+  position?: { x: number; y: number };
+
+  /** Force action past actionability checks (hover, drag) */
+  force?: boolean;
+
+  /** Scroll direction */
+  direction?: "up" | "down" | "left" | "right";
+
+  /** Pixels to scroll (default: 500) */
+  amount?: number;
+
+  /** Scroll to absolute position */
+  scrollTo?: "top" | "bottom";
+
+  /** JavaScript expression for evaluate action */
+  expression?: string;
+
+  /** File paths for upload action */
+  files?: string[];
+
+  /** Source element selector for drag action */
+  sourceSelector?: string;
+
+  /** Target element selector for drag action */
+  targetSelector?: string;
+
+  /** Position within source element for drag */
+  sourcePosition?: { x: number; y: number };
+
+  /** Position within target element for drag */
+  targetPosition?: { x: number; y: number };
+
+  /** CSS property name for css-equals assertion */
+  property?: string;
 }
 
 /**

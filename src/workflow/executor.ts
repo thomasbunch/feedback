@@ -15,6 +15,8 @@ import { resolveSelector } from "../interaction/selectors.js";
 import { capturePlaywrightPage } from "../screenshot/capture.js";
 import { optimizeScreenshot } from "../screenshot/optimize.js";
 import { evaluateAssertion } from "./assertions.js";
+import { existsSync } from "fs";
+import { resolve } from "path";
 
 /**
  * Validate a workflow step has all required fields for its action type.
@@ -51,20 +53,76 @@ export function validateStep(step: WorkflowStep, index: number): string | null {
     case "screenshot":
       // No required fields
       break;
-    case "assert": {
+    case "select": {
       if (!step.selector) {
-        return `Step ${index}: 'assert' requires a 'selector' field`;
+        return `Step ${index}: 'select' requires a 'selector' field`;
       }
+      const methods = [step.value !== undefined, step.label !== undefined, step.index !== undefined];
+      const count = methods.filter(Boolean).length;
+      if (count !== 1) {
+        return `Step ${index}: 'select' requires exactly one of 'value', 'label', or 'index'`;
+      }
+      break;
+    }
+    case "press":
+      if (!step.key) {
+        return `Step ${index}: 'press' requires a 'key' field`;
+      }
+      break;
+    case "hover":
+      if (!step.selector) {
+        return `Step ${index}: 'hover' requires a 'selector' field`;
+      }
+      break;
+    case "scroll":
+      if (!step.selector && !step.direction && !step.scrollTo) {
+        return `Step ${index}: 'scroll' requires at least one of 'selector', 'direction', or 'scrollTo'`;
+      }
+      break;
+    case "evaluate":
+      if (!step.expression) {
+        return `Step ${index}: 'evaluate' requires an 'expression' field`;
+      }
+      break;
+    case "upload": {
+      if (!step.selector) {
+        return `Step ${index}: 'upload' requires a 'selector' field`;
+      }
+      if (!step.files || step.files.length === 0) {
+        return `Step ${index}: 'upload' requires a non-empty 'files' array`;
+      }
+      break;
+    }
+    case "drag": {
+      if (!step.sourceSelector) {
+        return `Step ${index}: 'drag' requires a 'sourceSelector' field`;
+      }
+      if (!step.targetSelector) {
+        return `Step ${index}: 'drag' requires a 'targetSelector' field`;
+      }
+      break;
+    }
+    case "assert": {
       if (!step.assertType) {
         return `Step ${index}: 'assert' requires an 'assertType' field`;
       }
-      const needsExpected = ["text-equals", "text-contains", "value-equals", "attribute-equals"];
+      const pageLevelAssertions = ["url-equals", "url-contains", "title-equals", "a11y-passes"];
+      if (!pageLevelAssertions.includes(step.assertType) && !step.selector) {
+        return `Step ${index}: 'assert' requires a 'selector' field`;
+      }
+      const needsExpected = [
+        "text-equals", "text-contains", "value-equals", "attribute-equals",
+        "css-equals", "url-equals", "url-contains", "title-equals", "count-equals",
+      ];
       if (needsExpected.includes(step.assertType) && step.expected === undefined) {
         return `Step ${index}: '${step.assertType}' assertion requires an 'expected' field`;
       }
       const needsAttribute = ["has-attribute", "attribute-equals"];
       if (needsAttribute.includes(step.assertType) && !step.attribute) {
         return `Step ${index}: '${step.assertType}' assertion requires an 'attribute' field`;
+      }
+      if (step.assertType === "css-equals" && !step.property) {
+        return `Step ${index}: 'css-equals' assertion requires a 'property' field`;
       }
       break;
     }
@@ -186,6 +244,117 @@ export async function executeWorkflow(params: {
             state: step.state ?? "visible",
             timeout: step.timeout ?? 30000,
           });
+          break;
+        }
+
+        case "select": {
+          const locator = resolveSelector(page, step.selector!);
+          if (step.value !== undefined) {
+            await locator.selectOption({ value: step.value }, { timeout: step.timeout ?? 30000 });
+          } else if (step.label !== undefined) {
+            await locator.selectOption({ label: step.label }, { timeout: step.timeout ?? 30000 });
+          } else {
+            await locator.selectOption({ index: step.index! }, { timeout: step.timeout ?? 30000 });
+          }
+          break;
+        }
+
+        case "press": {
+          if (step.selector) {
+            const locator = resolveSelector(page, step.selector);
+            await locator.press(step.key!, { timeout: step.timeout ?? 30000 });
+          } else {
+            await page.keyboard.press(step.key!);
+          }
+          break;
+        }
+
+        case "hover": {
+          const locator = resolveSelector(page, step.selector!);
+          await locator.hover({
+            position: step.position ?? undefined,
+            force: step.force ?? undefined,
+            timeout: step.timeout ?? 30000,
+          });
+          break;
+        }
+
+        case "scroll": {
+          if (step.direction) {
+            // Direction-based scrolling via mouse.wheel
+            const amt = step.amount ?? 500;
+            let deltaX = 0;
+            let deltaY = 0;
+            switch (step.direction) {
+              case "down":
+                deltaY = amt;
+                break;
+              case "up":
+                deltaY = -amt;
+                break;
+              case "right":
+                deltaX = amt;
+                break;
+              case "left":
+                deltaX = -amt;
+                break;
+            }
+            if (step.selector) {
+              // Scroll within element: hover first to position mouse over it
+              const locator = resolveSelector(page, step.selector);
+              await locator.hover({ timeout: step.timeout ?? 30000 });
+            }
+            await page.mouse.wheel(deltaX, deltaY);
+            // Allow scroll to settle
+            await new Promise<void>((r) => setTimeout(r, 200));
+          } else if (step.scrollTo) {
+            // Absolute scroll position
+            if (step.selector) {
+              const locator = resolveSelector(page, step.selector);
+              await locator.evaluate((el, pos) => {
+                el.scrollTop = pos === "top" ? 0 : el.scrollHeight;
+              }, step.scrollTo);
+            } else {
+              await page.evaluate((pos) => {
+                window.scrollTo({ top: pos === "top" ? 0 : document.body.scrollHeight });
+              }, step.scrollTo);
+            }
+            await new Promise<void>((r) => setTimeout(r, 200));
+          } else if (step.selector) {
+            // Scroll element into view
+            const locator = resolveSelector(page, step.selector);
+            await locator.scrollIntoViewIfNeeded({ timeout: step.timeout ?? 30000 });
+          }
+          break;
+        }
+
+        case "evaluate": {
+          await page.evaluate(step.expression!);
+          break;
+        }
+
+        case "upload": {
+          // Validate all files exist before attempting upload
+          for (const filePath of step.files!) {
+            const resolved = resolve(filePath);
+            if (!existsSync(resolved)) {
+              throw new Error(`File not found: ${resolved}`);
+            }
+          }
+          const locator = resolveSelector(page, step.selector!);
+          await locator.setInputFiles(step.files!, { timeout: step.timeout ?? 30000 });
+          break;
+        }
+
+        case "drag": {
+          const sourceLocator = resolveSelector(page, step.sourceSelector!);
+          const targetLocator = resolveSelector(page, step.targetSelector!);
+          await sourceLocator.dragTo(targetLocator, {
+            sourcePosition: step.sourcePosition ?? undefined,
+            targetPosition: step.targetPosition ?? undefined,
+          });
+          // Post-drag stability wait
+          await new Promise<void>((r) => setTimeout(r, 500));
           break;
         }
 
