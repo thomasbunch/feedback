@@ -6,7 +6,7 @@
 /**
  * Types of processes the server can manage
  */
-export type ProcessType = "web-server" | "electron" | "windows-exe";
+export type ProcessType = "web-server" | "electron" | "windows-exe" | "tauri";
 
 /**
  * Lifecycle status of a managed process
@@ -77,6 +77,24 @@ export interface LaunchElectronConfig {
   /** Optional working directory */
   cwd?: string;
   /** Launch timeout in ms (default 30000) */
+  timeoutMs?: number;
+}
+
+/**
+ * Configuration for launching a Tauri application
+ */
+export interface LaunchTauriConfig {
+  /** Session this process belongs to */
+  sessionId: string;
+  /** Path to compiled Tauri application binary (.exe on Windows) */
+  binaryPath: string;
+  /** Optional command-line arguments for the Tauri app */
+  args?: string[];
+  /** Optional working directory (defaults to binary's directory) */
+  cwd?: string;
+  /** CDP remote debugging port (default: 9222) */
+  cdpPort?: number;
+  /** Launch timeout in ms (default: 30000) */
   timeoutMs?: number;
 }
 

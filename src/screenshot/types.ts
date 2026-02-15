@@ -29,7 +29,7 @@ export interface ScreenshotResult {
  * Stored reference to a Playwright Page for screenshot access
  */
 export interface PageReference {
-  type: "web" | "electron";
+  type: "web" | "electron" | "tauri";
   page: Page;
   browser?: Browser;              // only for web (lazy-created)
   browserContext?: BrowserContext; // only for web

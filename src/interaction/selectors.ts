@@ -55,7 +55,7 @@ export function getActivePage(
     if (!ref) {
       const refs = sessionManager.getPageRefs(sessionId);
       const available = refs.map((r) =>
-        r.type === "electron" ? "electron" : r.url ?? "unknown"
+        (r.type === "electron" || r.type === "tauri") ? r.type : r.url ?? "unknown"
       );
       return {
         success: false,
@@ -78,14 +78,14 @@ export function getActivePage(
     return {
       success: false,
       error:
-        "No pages available in this session. Launch an app first with launch_web_server, launch_electron, or screenshot_web.",
+        "No pages available in this session. Launch an app first with launch_web_server, launch_electron, launch_tauri, or screenshot_web.",
     };
   }
 
   if (refs.length === 1) {
     const ref = refs[0];
     const identifier =
-      ref.type === "electron" ? "electron" : ref.url ?? "unknown";
+      (ref.type === "electron" || ref.type === "tauri") ? ref.type : ref.url ?? "unknown";
     return {
       success: true,
       page: ref.page,
@@ -96,7 +96,7 @@ export function getActivePage(
 
   // Multiple pages — require explicit selection
   const available = refs.map((r) =>
-    r.type === "electron" ? "electron" : r.url ?? "unknown"
+    (r.type === "electron" || r.type === "tauri") ? r.type : r.url ?? "unknown"
   );
   return {
     success: false,

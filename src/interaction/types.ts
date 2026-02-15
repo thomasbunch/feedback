@@ -31,7 +31,7 @@ export type PageDiscoveryResult =
       success: true;
       page: Page;
       identifier: string;
-      type: "web" | "electron";
+      type: "web" | "electron" | "tauri";
     }
   | {
       success: false;
