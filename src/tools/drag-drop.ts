@@ -42,7 +42,7 @@ export function registerDragDropTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       force: z
         .boolean()

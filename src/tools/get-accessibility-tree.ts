@@ -30,7 +30,7 @@ export function registerGetAccessibilityTreeTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       selector: z
         .string()

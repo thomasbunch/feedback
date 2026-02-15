@@ -86,7 +86,7 @@ export function registerManageTabsTool(
         .string()
         .optional()
         .describe(
-          "Current page identifier for context discovery. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
     },
     async ({ sessionId, action, targetPage, url, pageIdentifier }) => {

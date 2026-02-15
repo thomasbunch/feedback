@@ -26,7 +26,7 @@ export function registerRunWorkflowTool(
 ): void {
   server.tool(
     "run_workflow",
-    "Execute a multi-step workflow on a web or Electron page. Runs actions in sequence (click, type, navigate, screenshot, wait, assert, select, press, hover, scroll, evaluate, upload, drag), captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, drag-and-drop, keyboard interactions, or multi-step UI verification with pass/fail assertions.",
+    "Execute a multi-step workflow on a web, Electron, or Tauri page. Runs actions in sequence (click, type, navigate, screenshot, wait, assert, select, press, hover, scroll, evaluate, upload, drag), captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, drag-and-drop, keyboard interactions, or multi-step UI verification with pass/fail assertions.",
     {
       sessionId: z
         .string()
@@ -212,7 +212,7 @@ export function registerRunWorkflowTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
     },
     async ({ sessionId, steps, pageIdentifier }, extra) => {

@@ -23,7 +23,7 @@ export function registerTypeTextTool(
 ): void {
   server.tool(
     "type_text",
-    "Type text into an input field or textarea on a web or Electron page. Returns a screenshot after typing. Uses fill (paste) by default; set pressSequentially for apps with keystroke handlers.",
+    "Type text into an input field or textarea on a web, Electron, or Tauri page. Returns a screenshot after typing. Uses fill (paste) by default; set pressSequentially for apps with keystroke handlers.",
     {
       sessionId: z
         .string()
@@ -40,7 +40,7 @@ export function registerTypeTextTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       pressSequentially: z
         .boolean()

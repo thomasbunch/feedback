@@ -23,7 +23,7 @@ export function registerNavigateTool(
 ): void {
   server.tool(
     "navigate",
-    "Navigate to a URL or use browser back/forward on a web or Electron page. Returns a screenshot of the resulting page. Use to load pages, follow links, or retrace steps.",
+    "Navigate to a URL or use browser back/forward on a web, Electron, or Tauri page. Returns a screenshot of the resulting page. Use to load pages, follow links, or retrace steps.",
     {
       sessionId: z
         .string()
@@ -42,7 +42,7 @@ export function registerNavigateTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       waitUntil: z
         .enum(["load", "domcontentloaded", "commit"])

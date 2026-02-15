@@ -23,7 +23,7 @@ export function registerClickElementTool(
 ): void {
   server.tool(
     "click_element",
-    "Click an element on a web or Electron page. Returns a screenshot after clicking. Use CSS selectors, text content, role, or test IDs to target elements.",
+    "Click an element on a web, Electron, or Tauri page. Returns a screenshot after clicking. Use CSS selectors, text content, role, or test IDs to target elements.",
     {
       sessionId: z
         .string()
@@ -37,7 +37,7 @@ export function registerClickElementTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       button: z
         .enum(["left", "right", "middle"])
