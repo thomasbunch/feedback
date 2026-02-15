@@ -2,6 +2,9 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestClient, TestContext } from "../../helpers/mcp-test-client.js";
 import { WEB_FIXTURE_DIR, WEB_PORT } from "../../helpers/fixtures.js";
 import { parseToolResult } from "../../helpers/parse-tool-result.js";
+import { writeFileSync, unlinkSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
 /**
  * Parse multi-content workflow result into summary, step metadata, and step images.
@@ -518,6 +521,210 @@ describe("run_workflow", () => {
 
       // Only 1 step result exists (second step never executed)
       expect(stepTexts.length).toBe(1);
+    }, 30_000);
+  });
+
+  // ─── v1.2 Workflow Actions ──────────────────────────────────────────
+
+  describe("v1.2 workflow actions", () => {
+    it("executes select action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "select", selector: "#color-select", value: "blue" },
+            { action: "assert", selector: "#color-select", assertType: "value-equals", expected: "blue" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(3);
+    }, 30_000);
+
+    it("executes press action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "type", selector: "#text-input", text: "" },
+            { action: "click", selector: "#text-input" },
+            { action: "press", key: "a" },
+            { action: "assert", selector: "#text-input", assertType: "value-equals", expected: "a" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+    }, 30_000);
+
+    it("executes hover action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "hover", selector: "#hover-target" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const hoverStep = JSON.parse(stepTexts[1].text!);
+      expect(hoverStep.action).toBe("hover");
+      expect(hoverStep.success).toBe(true);
+    }, 30_000);
+
+    it("executes scroll action with direction", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "scroll", selector: "#scroll-container", direction: "down", amount: 200 },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const scrollStep = JSON.parse(stepTexts[1].text!);
+      expect(scrollStep.action).toBe("scroll");
+      expect(scrollStep.success).toBe(true);
+    }, 30_000);
+
+    it("executes evaluate action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "evaluate", expression: "document.title = 'Changed'" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(2);
+    }, 30_000);
+
+    it("executes drag action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "drag", sourceSelector: "#drag-source", targetSelector: "#drop-target" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const dragStep = JSON.parse(stepTexts[1].text!);
+      expect(dragStep.action).toBe("drag");
+      expect(dragStep.success).toBe(true);
+    }, 30_000);
+
+    it("executes upload action", async () => {
+      // Create a temporary test file
+      const tempFilePath = join(tmpdir(), "workflow-upload-test.txt");
+      writeFileSync(tempFilePath, "test upload content");
+
+      try {
+        const result = await ctx.client.callTool({
+          name: "run_workflow",
+          arguments: {
+            sessionId,
+            steps: [
+              { action: "navigate", url: WEB_URL },
+              { action: "upload", selector: "#file-input", files: [tempFilePath] },
+            ],
+            pageIdentifier: WEB_URL,
+          },
+        });
+
+        expect(result.isError).toBeFalsy();
+
+        const { summary, stepTexts } = parseWorkflowResult(result);
+        expect(summary.workflow).toBe("complete");
+
+        const uploadStep = JSON.parse(stepTexts[1].text!);
+        expect(uploadStep.action).toBe("upload");
+        expect(uploadStep.success).toBe(true);
+      } finally {
+        try { unlinkSync(tempFilePath); } catch { /* ignore */ }
+      }
+    }, 30_000);
+
+    it("validates select requires exactly one selection method", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "select", selector: "#color-select" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      const content = result.content as Array<{ type: string; text?: string }>;
+      const errorText = content.find((c) => c.type === "text")?.text ?? "";
+      expect(errorText).toContain("exactly one of");
+    }, 30_000);
+
+    it("validates drag requires sourceSelector and targetSelector", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "drag", sourceSelector: "#drag-source" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      const content = result.content as Array<{ type: string; text?: string }>;
+      const errorText = content.find((c) => c.type === "text")?.text ?? "";
+      expect(errorText).toContain("targetSelector");
     }, 30_000);
   });
 });
