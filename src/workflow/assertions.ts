@@ -7,6 +7,7 @@
 import type { Page } from "playwright";
 import type { WorkflowStep } from "./types.js";
 import { resolveSelector } from "../interaction/selectors.js";
+import { AxeBuilder } from "@axe-core/playwright";
 
 /**
  * Structured result of an assertion evaluation.
@@ -33,14 +34,18 @@ export async function evaluateAssertion(
 ): Promise<AssertionResult> {
   const base = {
     assertType: step.assertType!,
-    selector: step.selector!,
+    selector: step.selector ?? "(page-level)",
   };
 
-  const locator = resolveSelector(page, step.selector!);
+  const pageLevelTypes = ["url-equals", "url-contains", "title-equals", "a11y-passes"];
+  const isPageLevel = pageLevelTypes.includes(step.assertType!);
+
+  // Only resolve locator for element-level assertions
+  const locator = isPageLevel ? null : resolveSelector(page, step.selector!);
 
   switch (step.assertType) {
     case "exists": {
-      const count = await locator.count();
+      const count = await locator!.count();
       const passed = count > 0;
       return {
         ...base,
@@ -54,7 +59,7 @@ export async function evaluateAssertion(
     }
 
     case "not-exists": {
-      const count = await locator.count();
+      const count = await locator!.count();
       const passed = count === 0;
       return {
         ...base,
@@ -69,7 +74,7 @@ export async function evaluateAssertion(
 
     case "visible": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -79,7 +84,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM (timeout waiting for attachment)`,
         };
       }
-      const visible = await locator.isVisible();
+      const visible = await locator!.isVisible();
       return {
         ...base,
         passed: visible,
@@ -92,7 +97,7 @@ export async function evaluateAssertion(
     }
 
     case "hidden": {
-      const count = await locator.count();
+      const count = await locator!.count();
       if (count === 0) {
         return {
           ...base,
@@ -102,7 +107,7 @@ export async function evaluateAssertion(
           message: `PASS: Element "${step.selector}" is not in DOM (counts as hidden)`,
         };
       }
-      const visible = await locator.isVisible();
+      const visible = await locator!.isVisible();
       const passed = !visible;
       return {
         ...base,
@@ -117,7 +122,7 @@ export async function evaluateAssertion(
 
     case "text-equals": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -127,7 +132,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const text = (await locator.innerText({ timeout })).trim();
+      const text = (await locator!.innerText({ timeout })).trim();
       const passed = text === step.expected;
       return {
         ...base,
@@ -142,7 +147,7 @@ export async function evaluateAssertion(
 
     case "text-contains": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -152,7 +157,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const text = await locator.innerText({ timeout });
+      const text = await locator!.innerText({ timeout });
       const passed = text.includes(step.expected ?? "");
       return {
         ...base,
@@ -167,7 +172,7 @@ export async function evaluateAssertion(
 
     case "has-attribute": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -177,7 +182,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const value = await locator.getAttribute(step.attribute!, { timeout });
+      const value = await locator!.getAttribute(step.attribute!, { timeout });
       const passed = value !== null;
       return {
         ...base,
@@ -192,7 +197,7 @@ export async function evaluateAssertion(
 
     case "attribute-equals": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -202,7 +207,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const value = await locator.getAttribute(step.attribute!, { timeout });
+      const value = await locator!.getAttribute(step.attribute!, { timeout });
       const passed = value === step.expected;
       return {
         ...base,
@@ -217,7 +222,7 @@ export async function evaluateAssertion(
 
     case "enabled": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -227,7 +232,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const enabled = await locator.isEnabled({ timeout });
+      const enabled = await locator!.isEnabled({ timeout });
       return {
         ...base,
         passed: enabled,
@@ -241,7 +246,7 @@ export async function evaluateAssertion(
 
     case "disabled": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -251,7 +256,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const enabled = await locator.isEnabled({ timeout });
+      const enabled = await locator!.isEnabled({ timeout });
       const passed = !enabled;
       return {
         ...base,
@@ -266,7 +271,7 @@ export async function evaluateAssertion(
 
     case "checked": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -276,7 +281,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const checked = await locator.isChecked({ timeout });
+      const checked = await locator!.isChecked({ timeout });
       return {
         ...base,
         passed: checked,
@@ -290,7 +295,7 @@ export async function evaluateAssertion(
 
     case "not-checked": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -300,7 +305,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const checked = await locator.isChecked({ timeout });
+      const checked = await locator!.isChecked({ timeout });
       const passed = !checked;
       return {
         ...base,
@@ -315,7 +320,7 @@ export async function evaluateAssertion(
 
     case "value-equals": {
       try {
-        await locator.waitFor({ state: "attached", timeout });
+        await locator!.waitFor({ state: "attached", timeout });
       } catch {
         return {
           ...base,
@@ -325,7 +330,7 @@ export async function evaluateAssertion(
           message: `FAIL: Element "${step.selector}" not found in DOM`,
         };
       }
-      const value = await locator.inputValue({ timeout });
+      const value = await locator!.inputValue({ timeout });
       const passed = value === step.expected;
       return {
         ...base,
@@ -335,6 +340,107 @@ export async function evaluateAssertion(
         message: passed
           ? `PASS: Value of "${step.selector}" equals "${step.expected}"`
           : `FAIL: Value of "${step.selector}" is "${value}", expected "${step.expected}"`,
+      };
+    }
+
+    case "css-equals": {
+      try {
+        await locator!.waitFor({ state: "attached", timeout });
+      } catch {
+        return {
+          ...base,
+          passed: false,
+          expected: `CSS ${step.property} equals "${step.expected}"`,
+          actual: "element not found in DOM",
+          message: `FAIL: Element "${step.selector}" not found in DOM`,
+        };
+      }
+      const value = await locator!.evaluate(
+        (el: Element, prop: string) => window.getComputedStyle(el).getPropertyValue(prop),
+        step.property!
+      );
+      const passed = value.trim() === step.expected;
+      return {
+        ...base,
+        passed,
+        expected: `CSS ${step.property} equals "${step.expected}"`,
+        actual: `"${value.trim()}"`,
+        message: passed
+          ? `PASS: CSS "${step.property}" of "${step.selector}" equals "${step.expected}"`
+          : `FAIL: CSS "${step.property}" of "${step.selector}" is "${value.trim()}", expected "${step.expected}"`,
+      };
+    }
+
+    case "url-equals": {
+      const url = page.url();
+      const passed = url === step.expected;
+      return {
+        ...base,
+        passed,
+        expected: `URL equals "${step.expected}"`,
+        actual: `"${url}"`,
+        message: passed
+          ? `PASS: URL equals "${step.expected}"`
+          : `FAIL: URL is "${url}", expected "${step.expected}"`,
+      };
+    }
+
+    case "url-contains": {
+      const url = page.url();
+      const passed = url.includes(step.expected ?? "");
+      return {
+        ...base,
+        passed,
+        expected: `URL contains "${step.expected}"`,
+        actual: `"${url}"`,
+        message: passed
+          ? `PASS: URL contains "${step.expected}"`
+          : `FAIL: URL "${url}" does not contain "${step.expected}"`,
+      };
+    }
+
+    case "title-equals": {
+      const title = await page.title();
+      const passed = title === step.expected;
+      return {
+        ...base,
+        passed,
+        expected: `title equals "${step.expected}"`,
+        actual: `"${title}"`,
+        message: passed
+          ? `PASS: Title equals "${step.expected}"`
+          : `FAIL: Title is "${title}", expected "${step.expected}"`,
+      };
+    }
+
+    case "count-equals": {
+      const count = await locator!.count();
+      const expectedCount = parseInt(step.expected!, 10);
+      const passed = count === expectedCount;
+      return {
+        ...base,
+        passed,
+        expected: `count equals ${expectedCount}`,
+        actual: `${count}`,
+        message: passed
+          ? `PASS: "${step.selector}" matches ${count} element(s)`
+          : `FAIL: "${step.selector}" matches ${count} element(s), expected ${expectedCount}`,
+      };
+    }
+
+    case "a11y-passes": {
+      const builder = new AxeBuilder({ page });
+      if (step.selector) builder.include(step.selector);
+      const results = await builder.analyze();
+      const passed = results.violations.length === 0;
+      return {
+        ...base,
+        passed,
+        expected: "0 accessibility violations",
+        actual: `${results.violations.length} violation(s)`,
+        message: passed
+          ? `PASS: No accessibility violations${step.selector ? ` in "${step.selector}"` : ""}`
+          : `FAIL: ${results.violations.length} accessibility violation(s)${step.selector ? ` in "${step.selector}"` : ""}: ${results.violations.map(v => v.id).join(", ")}`,
       };
     }
 
