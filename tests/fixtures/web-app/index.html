@@ -80,6 +80,19 @@
 
   <div id="storage-status"></div>
 
+  <!-- Phase 17: Quality Auditing test elements -->
+  <div id="a11y-test-section">
+    <img src="placeholder.png" id="img-no-alt" />
+    <button id="btn-no-text" style="width:30px;height:30px;"></button>
+    <div id="low-contrast" style="color:#aaa;background:#fff;">Low contrast text</div>
+    <div id="a11y-good-section" role="region" aria-label="Accessible Section">
+      <h2>Accessible Heading</h2>
+      <p id="css-test-element" style="color:rgb(255,0,0);font-size:20px;display:block;margin:10px;">
+        Styled paragraph for CSS property testing
+      </p>
+    </div>
+  </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
