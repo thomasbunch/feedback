@@ -90,6 +90,17 @@ const updateResponsiveInfo = () => {
 updateResponsiveInfo();
 window.addEventListener("resize", updateResponsiveInfo);
 
+// Phase 19: Network interception test target -- exercises intercept_network tool
+document.getElementById("fetch-mock-target")!.addEventListener("click", async () => {
+  try {
+    const resp = await fetch("/api/mock-target");
+    const data = await resp.json();
+    document.getElementById("fetch-mock-result")!.textContent = JSON.stringify(data);
+  } catch (err) {
+    document.getElementById("fetch-mock-result")!.textContent = `Error: ${(err as Error).message}`;
+  }
+});
+
 // Phase 19: Drag-and-drop handlers -- exercises drag_drop tool
 document.getElementById("drag-source")!.addEventListener("dragstart", (e) => {
   (e as DragEvent).dataTransfer!.setData("text/plain", "dragged");

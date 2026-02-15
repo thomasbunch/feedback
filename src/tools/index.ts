@@ -47,6 +47,7 @@ import { registerGetAccessibilityTreeTool } from "./get-accessibility-tree.js";
 import { registerCompareScreenshotsTool } from "./compare-screenshots.js";
 import { registerGetCssPropertyTool } from "./get-css-property.js";
 import { registerDragDropTool } from "./drag-drop.js";
+import { registerInterceptNetworkTool } from "./intercept-network.js";
 
 /**
  * Register all MCP tools with the server
@@ -246,7 +247,10 @@ export function registerTools(
   // Tool 39: drag_drop
   registerDragDropTool(server, sessionManager);
 
+  // Tool 40: intercept_network
+  registerInterceptNetworkTool(server, sessionManager);
+
   // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
 
-  console.error("Registered 39 MCP tools");
+  console.error("Registered 40 MCP tools");
 }

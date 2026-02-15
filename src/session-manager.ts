@@ -14,6 +14,13 @@ import {
 } from "./capture/types.js";
 import { randomUUID } from "crypto";
 
+// Route handler type for network interception tracking
+export interface RouteHandler {
+  urlPattern: string;
+  action: "mock" | "block" | "modify_headers";
+  handler: (route: import("playwright").Route) => Promise<void>;
+}
+
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
   private pageRefs: Map<string, PageReference> = new Map();
@@ -22,6 +29,7 @@ export class SessionManager {
   private errorCollectors: Map<string, Collector<ErrorEntry>> = new Map();
   private networkCollectors: Map<string, Collector<NetworkEntry>> = new Map();
   private processCollectors: Map<string, Collector<ProcessOutputEntry>> = new Map();
+  private routeHandlers: Map<string, RouteHandler[]> = new Map();
 
   /**
    * Create a new session with a unique UUID
@@ -137,6 +145,13 @@ export class SessionManager {
         map.delete(oldKey);
         map.set(newKey, value);
       }
+    }
+
+    // Re-key route handlers
+    const routeHandlerValue = this.routeHandlers.get(oldKey);
+    if (routeHandlerValue) {
+      this.routeHandlers.delete(oldKey);
+      this.routeHandlers.set(newKey, routeHandlerValue);
     }
   }
 
@@ -274,6 +289,54 @@ export class SessionManager {
     return collectors;
   }
 
+  // --- Route Handlers ---
+
+  /**
+   * Add a route handler for a session's page
+   */
+  addRouteHandler(sessionId: string, identifier: string, handler: RouteHandler): void {
+    const key = `${sessionId}:${identifier}`;
+    const handlers = this.routeHandlers.get(key) ?? [];
+    handlers.push(handler);
+    this.routeHandlers.set(key, handlers);
+  }
+
+  /**
+   * Get all route handlers for a session's page
+   */
+  getRouteHandlers(sessionId: string, identifier: string): RouteHandler[] {
+    return this.routeHandlers.get(`${sessionId}:${identifier}`) ?? [];
+  }
+
+  /**
+   * Remove a specific route handler by URL pattern
+   * @returns The removed handler, or undefined if not found
+   */
+  removeRouteHandler(sessionId: string, identifier: string, urlPattern: string): RouteHandler | undefined {
+    const key = `${sessionId}:${identifier}`;
+    const handlers = this.routeHandlers.get(key);
+    if (!handlers) return undefined;
+
+    const index = handlers.findIndex((h) => h.urlPattern === urlPattern);
+    if (index === -1) return undefined;
+
+    const [removed] = handlers.splice(index, 1);
+    if (handlers.length === 0) {
+      this.routeHandlers.delete(key);
+    }
+    return removed;
+  }
+
+  /**
+   * Remove and return all route handlers for a session's page
+   */
+  clearRouteHandlers(sessionId: string, identifier: string): RouteHandler[] {
+    const key = `${sessionId}:${identifier}`;
+    const handlers = this.routeHandlers.get(key) ?? [];
+    this.routeHandlers.delete(key);
+    return handlers;
+  }
+
   /**
    * Destroy a session and clean up all its resources
    * Logs cleanup errors but doesn't throw
@@ -287,8 +350,17 @@ export class SessionManager {
 
     console.error(`Destroying session ${sessionId} (${session.resources.length} resources)`);
 
-    // Clean up page references for this session
+    // Clean up route handlers for this session
+    // Pages will be closed shortly, route handlers are automatically removed
+    // Just clear our tracking state
     const prefix = `${sessionId}:`;
+    for (const [key] of this.routeHandlers) {
+      if (key.startsWith(prefix)) {
+        this.routeHandlers.delete(key);
+      }
+    }
+
+    // Clean up page references for this session
     for (const [key, ref] of this.pageRefs) {
       if (key.startsWith(prefix)) {
         try {
