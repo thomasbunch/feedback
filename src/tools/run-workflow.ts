@@ -12,6 +12,7 @@ import { getActivePage } from "../interaction/selectors.js";
 import { executeWorkflow, validateStep } from "../workflow/executor.js";
 import type { WorkflowResult } from "../workflow/types.js";
 import type { ToolResult } from "../types/index.js";
+import { sendProgress } from "../utils/progress.js";
 
 /**
  * Register the run_workflow tool with the MCP server
@@ -131,7 +132,7 @@ export function registerRunWorkflowTool(
           "URL or 'electron' to target a specific page. Omit if session has only one page."
         ),
     },
-    async ({ sessionId, steps, pageIdentifier }) => {
+    async ({ sessionId, steps, pageIdentifier }, extra) => {
       try {
         // 1. Validate session exists
         const session = sessionManager.get(sessionId);
@@ -181,6 +182,8 @@ export function registerRunWorkflowTool(
         }
 
         // 4. Execute workflow
+        await sendProgress(extra, 0, steps.length, "Starting workflow execution...");
+
         const result: WorkflowResult = await executeWorkflow({
           page,
           steps,
@@ -188,6 +191,15 @@ export function registerRunWorkflowTool(
           sessionId,
           pageIdentifier: identifier,
         });
+
+        await sendProgress(
+          extra,
+          result.completedSteps,
+          steps.length,
+          result.failedStep !== undefined
+            ? `Workflow stopped at step ${result.failedStep}`
+            : "Workflow complete"
+        );
 
         // 5. Build multi-content response
         const content: ToolResult["content"] = [];
