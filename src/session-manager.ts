@@ -30,6 +30,7 @@ export class SessionManager {
   private networkCollectors: Map<string, Collector<NetworkEntry>> = new Map();
   private processCollectors: Map<string, Collector<ProcessOutputEntry>> = new Map();
   private routeHandlers: Map<string, RouteHandler[]> = new Map();
+  private popupTracking: Set<string> = new Set();
 
   /**
    * Create a new session with a unique UUID
@@ -106,6 +107,20 @@ export class SessionManager {
       }
     }
     return refs;
+  }
+
+  /**
+   * Get all page references for a session with their identifiers
+   */
+  getPageRefEntries(sessionId: string): Array<{ identifier: string; ref: PageReference }> {
+    const entries: Array<{ identifier: string; ref: PageReference }> = [];
+    const prefix = `${sessionId}:`;
+    for (const [key, ref] of this.pageRefs) {
+      if (key.startsWith(prefix)) {
+        entries.push({ identifier: key.slice(prefix.length), ref });
+      }
+    }
+    return entries;
   }
 
   /**
@@ -337,6 +352,22 @@ export class SessionManager {
     return handlers;
   }
 
+  // --- Popup Tracking ---
+
+  /**
+   * Check if popup tracking is already set up for a session
+   */
+  hasPopupTracking(sessionId: string): boolean {
+    return this.popupTracking.has(sessionId);
+  }
+
+  /**
+   * Mark a session as having popup tracking set up
+   */
+  setPopupTracking(sessionId: string): void {
+    this.popupTracking.add(sessionId);
+  }
+
   /**
    * Destroy a session and clean up all its resources
    * Logs cleanup errors but doesn't throw
@@ -359,6 +390,9 @@ export class SessionManager {
         this.routeHandlers.delete(key);
       }
     }
+
+    // Clean up popup tracking for this session
+    this.popupTracking.delete(sessionId);
 
     // Clean up page references for this session
     for (const [key, ref] of this.pageRefs) {

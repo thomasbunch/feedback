@@ -48,6 +48,7 @@ import { registerCompareScreenshotsTool } from "./compare-screenshots.js";
 import { registerGetCssPropertyTool } from "./get-css-property.js";
 import { registerDragDropTool } from "./drag-drop.js";
 import { registerInterceptNetworkTool } from "./intercept-network.js";
+import { registerManageTabsTool } from "./manage-tabs.js";
 
 /**
  * Register all MCP tools with the server
@@ -250,7 +251,10 @@ export function registerTools(
   // Tool 40: intercept_network
   registerInterceptNetworkTool(server, sessionManager);
 
+  // Tool 41: manage_tabs
+  registerManageTabsTool(server, sessionManager);
+
   // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
 
-  console.error("Registered 40 MCP tools");
+  console.error("Registered 41 MCP tools");
 }

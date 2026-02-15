@@ -101,6 +101,11 @@ document.getElementById("fetch-mock-target")!.addEventListener("click", async ()
   }
 });
 
+// Phase 19: Multi-tab test triggers -- exercises manage_tabs tool
+document.getElementById("window-open-btn")!.addEventListener("click", () => {
+  window.open("/page2.html", "_blank");
+});
+
 // Phase 19: Drag-and-drop handlers -- exercises drag_drop tool
 document.getElementById("drag-source")!.addEventListener("dragstart", (e) => {
   (e as DragEvent).dataTransfer!.setData("text/plain", "dragged");
