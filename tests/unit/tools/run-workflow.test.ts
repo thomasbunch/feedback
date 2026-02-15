@@ -727,4 +727,215 @@ describe("run_workflow", () => {
       expect(errorText).toContain("targetSelector");
     }, 30_000);
   });
+
+  // ─── v1.2 Workflow Assertions ───────────────────────────────────────
+
+  describe("v1.2 workflow assertions", () => {
+    it("css-equals -- passes when CSS property matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#css-test-element", assertType: "css-equals", property: "color", expected: "rgb(255, 0, 0)" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("css-equals");
+    }, 30_000);
+
+    it("css-equals -- fails when CSS property does not match", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#css-test-element", assertType: "css-equals", property: "color", expected: "rgb(0, 0, 255)" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("stopped");
+      expect(summary.assertionsFailed).toBe(1);
+
+      // The assert step is step index 1 (after navigate)
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(false);
+    }, 30_000);
+
+    it("url-equals -- passes when URL matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "url-equals", expected: WEB_URL + "/" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("url-equals");
+    }, 30_000);
+
+    it("url-contains -- passes when URL contains substring", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "url-contains", expected: "localhost" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("url-contains");
+    }, 30_000);
+
+    it("title-equals -- passes when title matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "title-equals", expected: "Test Fixture" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("title-equals");
+    }, 30_000);
+
+    it("count-equals -- passes when element count matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#color-select option", assertType: "count-equals", expected: "4" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("count-equals");
+    }, 30_000);
+
+    it("a11y-passes -- scopes to selector and returns structured result", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#a11y-good-section", assertType: "a11y-passes" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      // The section may have color-contrast violations from the red text,
+      // so we verify structure rather than asserting pass
+      const { stepTexts } = parseWorkflowResult(result);
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.assertType).toBe("a11y-passes");
+      expect(typeof assertStep.assertion.passed).toBe("boolean");
+      expect(assertStep.assertion.expected).toBe("0 accessibility violations");
+      // Selector should be scoped
+      expect(assertStep.assertion.selector).toBe("#a11y-good-section");
+    }, 30_000);
+
+    it("a11y-passes -- works without selector (full page)", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "a11y-passes" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      // Don't check pass/fail since full page may have a11y issues -- just verify structure
+      const { stepTexts } = parseWorkflowResult(result);
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.assertType).toBe("a11y-passes");
+      expect(typeof assertStep.assertion.passed).toBe("boolean");
+    }, 30_000);
+
+    it("multi-step workflow combining v1.2 actions and assertions", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "select", selector: "#color-select", value: "green" },
+            { action: "assert", selector: "#color-select", assertType: "value-equals", expected: "green" },
+            { action: "hover", selector: "#hover-target" },
+            { action: "assert", assertType: "url-contains", expected: "localhost" },
+            { action: "scroll", direction: "down", amount: 100 },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(6);
+    }, 30_000);
+  });
 });
