@@ -1,6 +1,6 @@
 /**
  * hover_element MCP tool
- * Hovers over elements on web or Electron pages using Playwright Locator API
+ * Hovers over elements on web, Electron, or Tauri pages using Playwright Locator API
  */
 
 import { z } from "zod";

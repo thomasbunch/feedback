@@ -1,6 +1,6 @@
 /**
  * navigate MCP tool
- * Navigates to URLs and uses browser back/forward on web or Electron pages
+ * Navigates to URLs and uses browser back/forward on web, Electron, or Tauri pages
  */
 
 import { z } from "zod";

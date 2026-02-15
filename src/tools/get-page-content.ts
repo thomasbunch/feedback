@@ -1,6 +1,6 @@
 /**
  * get_page_content MCP tool
- * Extracts text or HTML content from a web/Electron page or a specific element
+ * Extracts text or HTML content from a web/Electron/Tauri page or a specific element
  */
 
 import { z } from "zod";

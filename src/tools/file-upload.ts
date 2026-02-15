@@ -1,6 +1,6 @@
 /**
  * file_upload MCP tool
- * Uploads files to a file input element on web or Electron pages
+ * Uploads files to a file input element on web, Electron, or Tauri pages
  */
 
 import { z } from "zod";

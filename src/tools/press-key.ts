@@ -1,6 +1,6 @@
 /**
  * press_key MCP tool
- * Presses keyboard keys or key combinations on web or Electron pages using Playwright
+ * Presses keyboard keys or key combinations on web, Electron, or Tauri pages using Playwright
  */
 
 import { z } from "zod";

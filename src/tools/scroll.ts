@@ -1,6 +1,6 @@
 /**
  * scroll MCP tool
- * Scrolls the page or specific elements on web or Electron pages using Playwright
+ * Scrolls the page or specific elements on web, Electron, or Tauri pages using Playwright
  */
 
 import { z } from "zod";

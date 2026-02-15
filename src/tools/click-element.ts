@@ -1,6 +1,6 @@
 /**
  * click_element MCP tool
- * Clicks elements on web or Electron pages using Playwright Locator API
+ * Clicks elements on web, Electron, or Tauri pages using Playwright Locator API
  */
 
 import { z } from "zod";

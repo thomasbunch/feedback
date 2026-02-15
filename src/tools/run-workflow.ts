@@ -1,6 +1,6 @@
 /**
  * run_workflow MCP tool
- * Executes multi-step workflows on web or Electron pages with per-step
+ * Executes multi-step workflows on web, Electron, or Tauri pages with per-step
  * screenshot capture and diagnostic log tracking.
  */
 

@@ -1,6 +1,6 @@
 /**
  * type_text MCP tool
- * Types text into input fields on web or Electron pages using Playwright Locator API
+ * Types text into input fields on web, Electron, or Tauri pages using Playwright Locator API
  */
 
 import { z } from "zod";

@@ -1,6 +1,6 @@
 /**
  * select_option MCP tool
- * Selects options in <select> dropdowns on web or Electron pages using Playwright Locator API
+ * Selects options in <select> dropdowns on web, Electron, or Tauri pages using Playwright Locator API
  */
 
 import { z } from "zod";
