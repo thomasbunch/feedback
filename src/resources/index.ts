@@ -216,7 +216,9 @@ export function registerResources(
 
       // Get page reference identifiers
       const pageRefs = sessionManager.getPageRefs(sid);
-      const pageRefIdentifiers = pageRefs.map((ref) => ref.url ?? "unknown");
+      const pageRefIdentifiers = pageRefs.map((ref) =>
+        (ref.type === "electron" || ref.type === "tauri") ? ref.type : ref.url ?? "unknown"
+      );
 
       // Collector entry counts
       const consoleEntryCount = sessionManager
