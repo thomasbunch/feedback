@@ -5,6 +5,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "./session-manager.js";
 import { registerTools } from "./tools/index.js";
+import { registerResources } from "./resources/index.js";
 
 /**
  * Create and configure the Feedback MCP server
@@ -18,6 +19,9 @@ export function createServer(sessionManager: SessionManager): McpServer {
 
   // Register MCP tools
   registerTools(server, sessionManager);
+
+  // Register MCP resources
+  registerResources(server, sessionManager);
 
   return server;
 }

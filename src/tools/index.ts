@@ -83,6 +83,10 @@ export function registerTools(
     {},
     async () => {
       const sessionId = sessionManager.create();
+
+      // Notify MCP clients that resource list changed (new session resources available)
+      server.sendResourceListChanged();
+
       return createToolResult({
         sessionId,
         created: true,
@@ -125,6 +129,10 @@ export function registerTools(
       }
 
       await sessionManager.destroy(sessionId);
+
+      // Notify MCP clients that resource list changed (session resources removed)
+      server.sendResourceListChanged();
+
       return createToolResult({
         sessionId,
         ended: true,
