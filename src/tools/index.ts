@@ -49,6 +49,8 @@ import { registerGetCssPropertyTool } from "./get-css-property.js";
 import { registerDragDropTool } from "./drag-drop.js";
 import { registerInterceptNetworkTool } from "./intercept-network.js";
 import { registerManageTabsTool } from "./manage-tabs.js";
+import { registerLaunchTauriTool } from "./launch-tauri.js";
+import { registerScreenshotTauriTool } from "./screenshot-tauri.js";
 
 /**
  * Register all MCP tools with the server
@@ -254,7 +256,13 @@ export function registerTools(
   // Tool 41: manage_tabs
   registerManageTabsTool(server, sessionManager);
 
+  // Tool 42: launch_tauri
+  registerLaunchTauriTool(server, sessionManager);
+
+  // Tool 43: screenshot_tauri
+  registerScreenshotTauriTool(server, sessionManager);
+
   // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
 
-  console.error("Registered 41 MCP tools");
+  console.error("Registered 43 MCP tools");
 }
