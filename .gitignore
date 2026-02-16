@@ -5,3 +5,6 @@
 node_modules/
 build/
 *.tsbuildinfo
+
+# Test fixture build artifacts
+tests/fixtures/web-app/dist/
