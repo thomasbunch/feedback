@@ -15,6 +15,7 @@ import { setupAutoCapture } from "../screenshot/auto-capture.js";
 import { attachConsoleCollector } from "../capture/console-collector.js";
 import { attachErrorCollector } from "../capture/error-collector.js";
 import { attachNetworkCollector } from "../capture/network-collector.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the screenshot_web tool with the MCP server
@@ -64,14 +65,8 @@ export function registerScreenshotWebTool(
     },
     async ({ sessionId, url, fullPage, maxWidth, quality, selector }) => {
       try {
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Check for existing page reference for this URL
         let pageRef = sessionManager.getPageRef(sessionId, url);

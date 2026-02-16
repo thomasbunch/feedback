@@ -7,8 +7,12 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
-import { getActivePage } from "../interaction/selectors.js";
 import { AxeBuilder } from "@axe-core/playwright";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the audit_accessibility tool with the MCP server
@@ -51,35 +55,13 @@ export function registerAuditAccessibilityTool(
     async ({ sessionId, pageIdentifier, tags, include, exclude }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page } = pageResult;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page } = resolved;
 
         // Build the axe-core audit
         const builder = new AxeBuilder({ page });

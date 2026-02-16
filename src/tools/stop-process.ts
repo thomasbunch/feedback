@@ -7,6 +7,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the stop_process tool with the MCP server
@@ -28,17 +29,8 @@ export function registerStopProcessTool(
     async ({ sessionId }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended or never existed",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "No active sessions. Use list_sessions to check."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         console.error(
           `[stop_process] Stopping all processes in session ${sessionId}`

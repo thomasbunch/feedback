@@ -7,7 +7,12 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
-import { getActivePage, resolveSelector } from "../interaction/selectors.js";
+import { resolveSelector } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the get_accessibility_tree tool with the MCP server
@@ -48,35 +53,13 @@ export function registerGetAccessibilityTreeTool(
     async ({ sessionId, pageIdentifier, selector, timeout }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page } = pageResult;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page } = resolved;
         const effectiveTimeout = timeout ?? 30000;
 
         // Determine the target locator

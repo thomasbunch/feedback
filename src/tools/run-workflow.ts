@@ -8,11 +8,15 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError } from "../utils/errors.js";
-import { getActivePage } from "../interaction/selectors.js";
 import { executeWorkflow, validateStep } from "../workflow/executor.js";
 import type { WorkflowResult } from "../workflow/types.js";
 import type { ToolResult } from "../types/index.js";
 import { sendProgress } from "../utils/progress.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the run_workflow tool with the MCP server
@@ -218,35 +222,13 @@ export function registerRunWorkflowTool(
     async ({ sessionId, steps, pageIdentifier }, extra) => {
       try {
         // 1. Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // 2. Discover page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page, identifier } = pageResult;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page, identifier } = resolved;
 
         // 3. Validate all steps up front before executing any
         const validationErrors: string[] = [];

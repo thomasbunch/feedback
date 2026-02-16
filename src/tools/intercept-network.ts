@@ -7,7 +7,11 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
-import { getActivePage } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the intercept_network tool with the MCP server
@@ -76,38 +80,17 @@ export function registerInterceptNetworkTool(
     }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // For list_routes, we can look up handlers without needing the page
         if (action === "list_routes") {
           // Still need to resolve the identifier for the Map key
-          const pageResult = getActivePage(
-            sessionManager,
-            sessionId,
-            pageIdentifier
-          );
-          if (!pageResult.success) {
-            return createToolError(
-              pageResult.error,
-              `Session: ${sessionId}`,
-              pageResult.availablePages
-                ? `Available pages: ${pageResult.availablePages.join(", ")}`
-                : undefined
-            );
-          }
+          const listResolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+          if (isToolResult(listResolved)) return listResolved;
           const handlers = sessionManager.getRouteHandlers(
             sessionId,
-            pageResult.identifier!
+            listResolved.identifier
           );
           return createToolResult({
             action: "list_routes",
@@ -146,23 +129,9 @@ export function registerInterceptNetworkTool(
         }
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page } = pageResult;
-        const identifier = pageResult.identifier!;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page, identifier } = resolved;
 
         switch (action) {
           case "add_route": {

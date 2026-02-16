@@ -16,6 +16,7 @@ import { detectServerReady } from "../process/monitor.js";
 import { createProcessResource } from "../process/cleanup.js";
 import { attachProcessCollector } from "../capture/process-collector.js";
 import { sendProgress } from "../utils/progress.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the launch_web_server tool with the MCP server
@@ -56,14 +57,8 @@ export function registerLaunchWebServerTool(
     async ({ sessionId, command, args, cwd, port, timeoutMs }, extra) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended or never existed",
-            "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         await sendProgress(extra, 0, 3, "Validating session and preparing to launch...");
 

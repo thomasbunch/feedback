@@ -10,6 +10,7 @@ import { createToolError, createScreenshotResult } from "../utils/errors.js";
 import { capturePlaywrightPage } from "../screenshot/capture.js";
 import { optimizeScreenshot } from "../screenshot/optimize.js";
 import { resolveSelector } from "../interaction/selectors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the screenshot_electron tool with the MCP server
@@ -53,14 +54,8 @@ export function registerScreenshotElectronTool(
     },
     async ({ sessionId, fullPage, maxWidth, quality, selector }) => {
       try {
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            "Create a session and launch an Electron app first."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         const pageRef = sessionManager.getPageRef(sessionId, "electron");
         if (!pageRef) {

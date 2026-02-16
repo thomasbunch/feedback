@@ -7,6 +7,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 export function registerGetScreenshotTool(
   server: McpServer,
@@ -20,14 +21,8 @@ export function registerGetScreenshotTool(
     },
     async ({ sessionId }) => {
       try {
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         const autoCapture = sessionManager.getAutoCapture(sessionId);
         if (!autoCapture) {

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 export function registerGetErrorsTool(
   server: McpServer,
@@ -23,14 +24,8 @@ export function registerGetErrorsTool(
         .describe("Filter by error type (default: all)"),
     },
     async ({ sessionId, type }) => {
-      const session = sessionManager.get(sessionId);
-      if (!session) {
-        return createToolError(
-          `Session not found: ${sessionId}`,
-          "The session may have already been ended or never existed",
-          "Create a session first with create_session."
-        );
-      }
+      const session = validateSession(sessionManager, sessionId);
+      if (isToolResult(session)) return session;
 
       const collectors = sessionManager.getErrorCollectors(sessionId);
       if (collectors.length === 0) {

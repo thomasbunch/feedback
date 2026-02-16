@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(resolve(__dirname, "../../package.json"), "utf-8"));
@@ -121,17 +122,8 @@ export function registerTools(
       sessionId: z.string().describe("The session ID to end"),
     },
     async ({ sessionId }) => {
-      const session = sessionManager.get(sessionId);
-      if (!session) {
-        const availableSessions = sessionManager.list();
-        return createToolError(
-          `Session not found: ${sessionId}`,
-          "The session may have already been ended or never existed",
-          availableSessions.length > 0
-            ? `Available sessions: ${availableSessions.join(", ")}`
-            : "No active sessions. Create one with create_session first."
-        );
-      }
+      const session = validateSession(sessionManager, sessionId);
+      if (isToolResult(session)) return session;
 
       await sessionManager.destroy(sessionId);
 

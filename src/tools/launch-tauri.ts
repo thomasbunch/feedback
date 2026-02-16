@@ -19,6 +19,7 @@ import { attachErrorCollector } from "../capture/error-collector.js";
 import { attachNetworkCollector } from "../capture/network-collector.js";
 import { spawnCrossPlatform, attachProcessListeners } from "../process/launcher.js";
 import { killProcessTree } from "../process/cleanup.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the launch_tauri tool with the MCP server
@@ -75,14 +76,8 @@ export function registerLaunchTauriTool(
 
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended or never existed",
-            "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Resolve paths
         const resolvedBinaryPath = path.resolve(binaryPath);

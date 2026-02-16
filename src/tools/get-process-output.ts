@@ -7,6 +7,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 export function registerGetProcessOutputTool(
   server: McpServer,
@@ -30,14 +31,8 @@ export function registerGetProcessOutputTool(
         .describe("Max lines to return, most recent first (default: 200)"),
     },
     async ({ sessionId, stream, limit }) => {
-      const session = sessionManager.get(sessionId);
-      if (!session) {
-        return createToolError(
-          `Session not found: ${sessionId}`,
-          "The session may have already been ended or never existed",
-          "Create a session first with create_session."
-        );
-      }
+      const session = validateSession(sessionManager, sessionId);
+      if (isToolResult(session)) return session;
 
       const collectors = sessionManager.getProcessCollectors(sessionId);
       if (collectors.length === 0) {
