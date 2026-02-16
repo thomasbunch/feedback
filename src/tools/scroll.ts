@@ -13,6 +13,7 @@ import {
   isToolResult,
   resolvePageOrError,
   captureAndOptimize,
+  handleSelectorError,
 } from "../utils/tool-helpers.js";
 
 /**
@@ -161,34 +162,14 @@ export function registerScrollTool(
           screenshot.mimeType
         );
       } catch (error) {
+        if (target) {
+          return handleSelectorError(error, { selector: target, timeout: timeout ?? 30000, actionName: "scroll" });
+        }
         const message =
           error instanceof Error ? error.message : String(error);
-
-        // Strict mode violation: selector matched multiple elements
-        if (message.includes("strict mode violation")) {
-          return createToolError(
-            "Selector matched multiple elements",
-            `Target "${target}" matched more than one element (strict mode violation)`,
-            "Use a more specific selector or add :nth-child(), :first-of-type, or similar to target a single element."
-          );
-        }
-
-        // Timeout: element not found or not actionable within timeout
-        if (
-          message.includes("Timeout") ||
-          message.includes("timeout")
-        ) {
-          return createToolError(
-            "Element not found within timeout",
-            `Target "${target}" did not match any visible element within ${timeout ?? 30000}ms`,
-            "Check the selector is correct, the element is visible, or increase the timeout. Take a screenshot first to verify the page state."
-          );
-        }
-
-        // Default error
         return createToolError(
           "Failed to scroll",
-          `${target ? `Target: "${target}" — ` : ""}${message}`,
+          message,
           "Take a screenshot to verify the page state and element existence."
         );
       }

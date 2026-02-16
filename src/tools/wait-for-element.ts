@@ -7,13 +7,14 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
-import { createToolError, createScreenshotResult } from "../utils/errors.js";
+import { createScreenshotResult } from "../utils/errors.js";
 import { resolveSelector } from "../interaction/selectors.js";
 import {
   validateSession,
   isToolResult,
   resolvePageOrError,
   captureAndOptimize,
+  handleSelectorError,
 } from "../utils/tool-helpers.js";
 
 /**
@@ -91,36 +92,7 @@ export function registerWaitForElementTool(
           screenshot.mimeType
         );
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
-
-        // Strict mode violation: selector matched multiple elements
-        if (message.includes("strict mode violation")) {
-          return createToolError(
-            "Selector matched multiple elements",
-            `Selector "${selector}" matched more than one element (strict mode violation)`,
-            "Use a more specific selector or add :nth-child(), :first-of-type, or similar to target a single element."
-          );
-        }
-
-        // Timeout: element did not reach expected state
-        if (
-          message.includes("Timeout") ||
-          message.includes("timeout")
-        ) {
-          return createToolError(
-            `Element did not reach state '${state}' within ${timeout ?? 30000}ms`,
-            `Selector: "${selector}", target state: "${state}"`,
-            `The element exists but did not become ${state}. Take a screenshot to see the current page state.`
-          );
-        }
-
-        // Default error
-        return createToolError(
-          "Failed to wait for element",
-          `Selector: "${selector}", state: "${state}" — ${message}`,
-          "Take a screenshot to verify the element exists and is visible on the page."
-        );
+        return handleSelectorError(error, { selector, timeout: timeout ?? 30000, actionName: "wait for element" });
       }
     }
   );

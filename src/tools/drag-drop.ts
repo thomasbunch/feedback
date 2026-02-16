@@ -6,13 +6,14 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
-import { createToolError, createScreenshotResult } from "../utils/errors.js";
+import { createScreenshotResult } from "../utils/errors.js";
 import { resolveSelector } from "../interaction/selectors.js";
 import {
   validateSession,
   isToolResult,
   resolvePageOrError,
   captureAndOptimize,
+  handleSelectorError,
 } from "../utils/tool-helpers.js";
 
 /**
@@ -122,36 +123,11 @@ export function registerDragDropTool(
           screenshot.mimeType
         );
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
-
-        // Strict mode violation: selector matched multiple elements
-        if (message.includes("strict mode violation")) {
-          return createToolError(
-            "Selector matched multiple elements",
-            `Source "${sourceSelector}" or target "${targetSelector}" matched more than one element (strict mode violation)`,
-            "Use a more specific selector or add :nth-child(), :first-of-type, or similar to target a single element."
-          );
-        }
-
-        // Timeout: element not found or not actionable within timeout
-        if (
-          message.includes("Timeout") ||
-          message.includes("timeout")
-        ) {
-          return createToolError(
-            "Element not found within timeout",
-            `Source "${sourceSelector}" or target "${targetSelector}" did not match any visible element within ${timeout ?? 30000}ms`,
-            "Check the selectors are correct, the elements are visible, or increase the timeout. Take a screenshot first to verify the page state."
-          );
-        }
-
-        // Default error
-        return createToolError(
-          "Failed to drag and drop",
-          `Source: "${sourceSelector}", Target: "${targetSelector}" — ${message}`,
-          "Take a screenshot to verify the elements exist and are visible on the page."
-        );
+        return handleSelectorError(error, {
+          selector: `${sourceSelector} -> ${targetSelector}`,
+          timeout: timeout ?? 30000,
+          actionName: "drag and drop",
+        });
       }
     }
   );

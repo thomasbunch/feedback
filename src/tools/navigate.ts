@@ -98,9 +98,9 @@ export function registerNavigateTool(
             timeout: effectiveTimeout,
           });
 
-          // Re-key page ref AND all collector maps atomically
-          // so page discovery and diagnostic lookups work with the new URL
-          if (pageType === "web" && currentIdentifier !== "electron") {
+          // Only re-key for URL-based identifiers (not fixed "electron"/"tauri" identifiers)
+          const isUrlBased = pageType === "web" && currentIdentifier !== "electron" && currentIdentifier !== "tauri";
+          if (isUrlBased) {
             sessionManager.rekeyIdentifier(sessionId, currentIdentifier, url!);
             // Update the URL field in the re-keyed page ref
             const updatedRef = sessionManager.getPageRef(sessionId, url!);
