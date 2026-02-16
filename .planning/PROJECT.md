@@ -42,18 +42,21 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 
 ### Active
 
-(None yet — define requirements in next milestone with `/gsd:new-milestone`)
+## Current Milestone: v2.0 Full Platform Automation
 
-Previously considered (deferred to future milestones):
-- Interact with C# desktop apps: click at screen coordinates, simulate keyboard input
+**Goal:** Transform auto-feedback from a web/Electron-focused tool into a full platform automation server — deep desktop C# interaction, multi-browser testing, self-healing selectors, session persistence, smart content settling, plugin extensibility, and iframe/shadow DOM transparency.
+
+**Target features:**
+- Desktop C# interaction: coordinate clicking + keyboard input as baseline, Windows UI Automation element trees as upgrade path
 - Desktop window management: focus, resize, minimize/maximize
-- Read desktop element state via Windows UI Automation APIs
-- Self-healing element location using visual similarity when selectors break
-- Multi-browser support (Firefox, WebKit) beyond Chromium
+- Self-healing element location: auto-retry fallback chain (text, role, testid, nearby elements), suggest alternatives if all fail
+- Multi-browser support: Firefox + WebKit alongside Chromium
 - Session resilience: browser crash detection, collector caps, framework-aware waits
-- Content settling: MutationObserver DOM stability, animation disabling, HMR-aware timing
-- Advanced architecture: plugin system, session persistence, event streaming
-- iframe interaction and shadow DOM traversal
+- Session persistence: serialize session state, survive server restarts, resume where you left off
+- Content settling: smart auto-detect (wait if page loading/animating, skip if stable), MutationObserver + animation disabling + HMR-aware timing
+- Plugin system: custom MCP tool registration + before/after hooks on existing tools
+- Event streaming: push MCP notifications + pull MCP resources, both channels
+- iframe/shadow DOM: transparent auto-pierce, explicit selector syntax as fallback when auto-detection fails
 
 ### Out of Scope
 
@@ -75,6 +78,7 @@ Tech stack: TypeScript/Node.js, MCP SDK, Playwright, Sharp, node-screenshots, vi
 279 automated tests across 49 test files with 3 fixture apps.
 Built across 3 milestones: v1.0 (Feb 5-7), v1.1 (Feb 7-8), v1.2 (Feb 12-15, 2026).
 All tools verified working end-to-end. 3 bugs found and fixed during v1.2 stabilization.
+v2.0 targets full platform automation — extending beyond web/Electron into deep desktop C# interaction, multi-browser coverage, session persistence, plugin extensibility, and transparent iframe/shadow DOM traversal.
 
 ## Constraints
 
@@ -119,4 +123,4 @@ All tools verified working end-to-end. 3 bugs found and fixed during v1.2 stabil
 | Tauri reuses existing dependencies | No new deps needed — wait-on, tree-kill, spawnCrossPlatform | Good |
 
 ---
-*Last updated: 2026-02-15 after v1.2 milestone*
+*Last updated: 2026-02-16 after v2.0 milestone start*

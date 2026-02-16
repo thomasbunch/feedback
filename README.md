@@ -48,6 +48,38 @@ Or if installed locally in a project:
 
 Restart Claude Code after adding the configuration. You should see Feedback's 43 tools available.
 
+## Configure with OpenCode
+
+Add to your `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "feedback": {
+      "type": "local",
+      "command": ["get-feedback-mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+Or if installed locally in a project:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "feedback": {
+      "type": "local",
+      "command": ["npx", "get-feedback-mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
 ## What It Does
 
 ### Session Management
