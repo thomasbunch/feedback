@@ -219,14 +219,15 @@ export async function executeWorkflow(params: {
             timeout: step.timeout ?? 30000,
           });
 
-          // Update PageReference URL (matches navigate.ts lines 120-128)
-          const oldRef = sessionManager.getPageRef(sessionId, pageIdentifier);
-          if (oldRef) {
-            sessionManager.removePageRef(sessionId, pageIdentifier);
-            sessionManager.setPageRef(sessionId, step.url!, {
-              ...oldRef,
-              url: step.url!,
-            });
+          // Re-key page ref AND all collector maps atomically (matches navigate.ts)
+          const pageType = sessionManager.getPageRef(sessionId, pageIdentifier)?.type;
+          const isUrlBased = pageType === "web" && pageIdentifier !== "electron" && pageIdentifier !== "tauri";
+          if (isUrlBased) {
+            sessionManager.rekeyIdentifier(sessionId, pageIdentifier, step.url!);
+            const updatedRef = sessionManager.getPageRef(sessionId, step.url!);
+            if (updatedRef) {
+              updatedRef.url = step.url!;
+            }
           }
           // Update local identifier for subsequent steps
           pageIdentifier = step.url!;

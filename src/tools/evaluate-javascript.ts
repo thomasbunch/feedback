@@ -61,10 +61,11 @@ export function registerEvaluateJavascriptTool(
         const effectiveTimeout = timeout ?? 30000;
 
         // Evaluate the expression with timeout
+        let timeoutId: ReturnType<typeof setTimeout>;
         const result = await Promise.race([
           page.evaluate(expression),
-          new Promise((_, reject) =>
-            setTimeout(
+          new Promise((_, reject) => {
+            timeoutId = setTimeout(
               () =>
                 reject(
                   new Error(
@@ -72,9 +73,10 @@ export function registerEvaluateJavascriptTool(
                   )
                 ),
               effectiveTimeout
-            )
-          ),
+            );
+          }),
         ]);
+        clearTimeout(timeoutId!);
 
         // Determine the result type
         let resultType: string;
