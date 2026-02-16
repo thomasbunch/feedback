@@ -131,6 +131,43 @@ export class SessionManager {
   }
 
   /**
+   * Remove and detach all diagnostic collectors for a specific page.
+   * Used when closing individual tabs to prevent collector memory leaks.
+   */
+  removeCollectors(sessionId: string, identifier: string): void {
+    const key = `${sessionId}:${identifier}`;
+
+    const consoleCollector = this.consoleCollectors.get(key);
+    if (consoleCollector) {
+      consoleCollector.detach();
+      this.consoleCollectors.delete(key);
+    }
+
+    const errorCollector = this.errorCollectors.get(key);
+    if (errorCollector) {
+      errorCollector.detach();
+      this.errorCollectors.delete(key);
+    }
+
+    const networkCollector = this.networkCollectors.get(key);
+    if (networkCollector) {
+      networkCollector.detach();
+      this.networkCollectors.delete(key);
+    }
+
+    const processCollector = this.processCollectors.get(key);
+    if (processCollector) {
+      processCollector.detach();
+      this.processCollectors.delete(key);
+    }
+
+    // Also clean up route handlers for this page
+    if (this.routeHandlers.has(key)) {
+      this.routeHandlers.delete(key);
+    }
+  }
+
+  /**
    * Re-key all Maps associated with a page identifier.
    * Used by navigate when goto changes the page URL.
    * Updates: pageRefs, consoleCollectors, errorCollectors, networkCollectors, processCollectors.

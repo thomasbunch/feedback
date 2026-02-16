@@ -354,6 +354,8 @@ async function handleClose(
 
   await targetRef.page.close();
   sessionManager.removePageRef(sessionId, targetPageId);
+  // Clean up collectors for the closed tab to prevent memory leaks
+  sessionManager.removeCollectors(sessionId, targetPageId);
 
   return createToolResult({
     action: "close_tab",
