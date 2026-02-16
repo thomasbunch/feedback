@@ -38,12 +38,14 @@ export function registerManageStorageTool(
         .describe("Which storage to operate on"),
       key: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "Cookie name or storage key. Required for get, set, delete."
         ),
       value: z
         .string()
+        .min(1)
         .optional()
         .describe("Value to set. Required for action: 'set'."),
       cookieOptions: z
@@ -64,6 +66,7 @@ export function registerManageStorageTool(
         ),
       state: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "JSON string of storage state to restore. Used with action: 'restore'. For cookies, this is the array from a prior 'save'. For localStorage/sessionStorage, this is the key-value object from a prior 'save'."

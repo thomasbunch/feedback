@@ -39,6 +39,7 @@ export function registerNavigateTool(
         ),
       url: z
         .string()
+        .min(1)
         .optional()
         .describe("URL to navigate to (required when action is 'goto')"),
       pageIdentifier: z

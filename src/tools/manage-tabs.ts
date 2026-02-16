@@ -77,12 +77,14 @@ export function registerManageTabsTool(
         .describe("Operation to perform"),
       targetPage: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "Page identifier (URL) to switch to or close. Required for switch and close."
         ),
       url: z
         .string()
+        .min(1)
         .optional()
         .describe("URL to open in a new tab. Required for open action."),
       pageIdentifier: z

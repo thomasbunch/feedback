@@ -39,12 +39,14 @@ export function registerWaitForConditionTool(
         .describe("Condition type to wait for"),
       expression: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "JavaScript expression that must evaluate to a truthy value. Required when type is 'javascript'."
         ),
       urlPattern: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "URL string or glob pattern to wait for a response from. Required when type is 'url'. Example: '**/api/data' or 'https://example.com/api/*'"

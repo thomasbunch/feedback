@@ -32,6 +32,7 @@ export function registerEvaluateJavascriptTool(
         .describe("Session ID from create_session"),
       expression: z
         .string()
+        .min(1)
         .describe(
           "JavaScript expression or code to evaluate. Runs in the page context with access to document, window, etc. Must be a single expression or wrapped in an IIFE for multi-statement code."
         ),

@@ -29,11 +29,13 @@ export function registerCompareScreenshotsTool(
         .describe("Session ID from create_session"),
       image1: z
         .string()
+        .min(1)
         .describe(
           "Base64-encoded image data (from screenshot_web, screenshot_electron, or other screenshot tool)"
         ),
       image2: z
         .string()
+        .min(1)
         .describe("Base64-encoded image data to compare against image1"),
       threshold: z
         .number()

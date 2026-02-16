@@ -35,6 +35,7 @@ export function registerInterceptNetworkTool(
         .describe("Operation to perform"),
       urlPattern: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "Glob pattern for URL matching (e.g., '**/api/data', '**/*.png'). Required for add_route and remove_route."

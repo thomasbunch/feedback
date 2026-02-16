@@ -34,6 +34,7 @@ export function registerGetPageContentTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "CSS selector to extract from a specific element. If omitted, extracts from the full page."
