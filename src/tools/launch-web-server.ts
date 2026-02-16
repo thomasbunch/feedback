@@ -15,6 +15,8 @@ import {
 import { detectServerReady } from "../process/monitor.js";
 import { createProcessResource } from "../process/cleanup.js";
 import { attachProcessCollector } from "../capture/process-collector.js";
+import { sendProgress } from "../utils/progress.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the launch_web_server tool with the MCP server
@@ -52,17 +54,13 @@ export function registerLaunchWebServerTool(
         .optional()
         .describe("Readiness timeout in ms (default: 60000)"),
     },
-    async ({ sessionId, command, args, cwd, port, timeoutMs }) => {
+    async ({ sessionId, command, args, cwd, port, timeoutMs }, extra) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended or never existed",
-            "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
+
+        await sendProgress(extra, 0, 3, "Validating session and preparing to launch...");
 
         console.error(
           `[launch_web_server] Launching: ${command} ${args.join(" ")} in ${cwd} on port ${port}`
@@ -85,6 +83,8 @@ export function registerLaunchWebServerTool(
         const resource = createProcessResource(child, "web-server");
         sessionManager.addResource(sessionId, resource);
 
+        await sendProgress(extra, 1, 3, "Process spawned, waiting for server readiness...");
+
         // Wait for server readiness
         try {
           await detectServerReady(child, port, timeoutMs ?? 60000);
@@ -100,6 +100,8 @@ export function registerLaunchWebServerTool(
             "Check the command and port. The process may have crashed -- check server logs."
           );
         }
+
+        await sendProgress(extra, 3, 3, "Server ready");
 
         return createToolResult({
           sessionId,

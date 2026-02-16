@@ -1,6 +1,6 @@
 /**
  * run_workflow MCP tool
- * Executes multi-step workflows on web or Electron pages with per-step
+ * Executes multi-step workflows on web, Electron, or Tauri pages with per-step
  * screenshot capture and diagnostic log tracking.
  */
 
@@ -8,10 +8,15 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError } from "../utils/errors.js";
-import { getActivePage } from "../interaction/selectors.js";
 import { executeWorkflow, validateStep } from "../workflow/executor.js";
 import type { WorkflowResult } from "../workflow/types.js";
 import type { ToolResult } from "../types/index.js";
+import { sendProgress } from "../utils/progress.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the run_workflow tool with the MCP server
@@ -25,7 +30,7 @@ export function registerRunWorkflowTool(
 ): void {
   server.tool(
     "run_workflow",
-    "Execute a multi-step workflow on a web or Electron page. Runs actions in sequence, captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, or multi-step UI verification with pass/fail assertions.",
+    "Execute a multi-step workflow on a web, Electron, or Tauri page. Runs actions in sequence (click, type, navigate, screenshot, wait, assert, select, press, hover, scroll, evaluate, upload, drag), captures screenshot and logs at each step, stops on first error. Use for form filling, navigation flows, drag-and-drop, keyboard interactions, or multi-step UI verification with pass/fail assertions.",
     {
       sessionId: z
         .string()
@@ -34,7 +39,10 @@ export function registerRunWorkflowTool(
         .array(
           z.object({
             action: z
-              .enum(["click", "type", "navigate", "screenshot", "wait", "assert"])
+              .enum([
+                "click", "type", "navigate", "screenshot", "wait", "assert",
+                "select", "press", "hover", "scroll", "evaluate", "upload", "drag",
+              ])
               .describe("Action to perform"),
             selector: z
               .string()
@@ -102,16 +110,22 @@ export function registerRunWorkflowTool(
                 "checked",
                 "not-checked",
                 "value-equals",
+                "css-equals",
+                "url-equals",
+                "url-contains",
+                "title-equals",
+                "count-equals",
+                "a11y-passes",
               ])
               .optional()
               .describe(
-                "Assertion type (required for assert action). Checks element state and reports pass/fail."
+                "Assertion type (required for assert action). Element-level: exists, not-exists, visible, hidden, text-equals, text-contains, has-attribute, attribute-equals, enabled, disabled, checked, not-checked, value-equals, css-equals, count-equals. Page-level (no selector needed): url-equals, url-contains, title-equals, a11y-passes."
               ),
             expected: z
               .string()
               .optional()
               .describe(
-                "Expected value for text-equals, text-contains, value-equals, attribute-equals assertions"
+                "Expected value for text-equals, text-contains, value-equals, attribute-equals, css-equals, url-equals, url-contains, title-equals, count-equals assertions"
               ),
             attribute: z
               .string()
@@ -119,6 +133,80 @@ export function registerRunWorkflowTool(
               .describe(
                 "Attribute name for has-attribute, attribute-equals assertions"
               ),
+            value: z
+              .string()
+              .optional()
+              .describe("Option value for select action"),
+            label: z
+              .string()
+              .optional()
+              .describe("Option label text for select action"),
+            index: z
+              .number()
+              .int()
+              .min(0)
+              .optional()
+              .describe("Option index (zero-based) for select action"),
+            key: z
+              .string()
+              .optional()
+              .describe(
+                "Key name or combination for press action (e.g. Enter, Control+A, Shift+Tab)"
+              ),
+            position: z
+              .object({ x: z.number(), y: z.number() })
+              .optional()
+              .describe("Position within element for hover action"),
+            force: z
+              .boolean()
+              .optional()
+              .describe(
+                "Force action past actionability checks (hover, drag)"
+              ),
+            direction: z
+              .enum(["up", "down", "left", "right"])
+              .optional()
+              .describe("Scroll direction"),
+            amount: z
+              .number()
+              .int()
+              .min(1)
+              .optional()
+              .describe("Pixels to scroll (default: 500)"),
+            scrollTo: z
+              .enum(["top", "bottom"])
+              .optional()
+              .describe("Scroll to absolute position"),
+            expression: z
+              .string()
+              .optional()
+              .describe(
+                "JavaScript expression for evaluate action (return value discarded in workflow context)"
+              ),
+            files: z
+              .array(z.string())
+              .optional()
+              .describe("Absolute file paths for upload action"),
+            sourceSelector: z
+              .string()
+              .optional()
+              .describe("Source element selector for drag action"),
+            targetSelector: z
+              .string()
+              .optional()
+              .describe("Target element selector for drag action"),
+            sourcePosition: z
+              .object({ x: z.number(), y: z.number() })
+              .optional()
+              .describe("Position within source element for drag"),
+            targetPosition: z
+              .object({ x: z.number(), y: z.number() })
+              .optional()
+              .describe("Position within target element for drag"),
+            property: z
+              .string()
+              .optional()
+              .describe("CSS property name for css-equals assertion"),
           })
         )
         .min(1)
@@ -128,41 +216,19 @@ export function registerRunWorkflowTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
     },
-    async ({ sessionId, steps, pageIdentifier }) => {
+    async ({ sessionId, steps, pageIdentifier }, extra) => {
       try {
         // 1. Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // 2. Discover page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page, identifier } = pageResult;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page, identifier } = resolved;
 
         // 3. Validate all steps up front before executing any
         const validationErrors: string[] = [];
@@ -181,6 +247,8 @@ export function registerRunWorkflowTool(
         }
 
         // 4. Execute workflow
+        await sendProgress(extra, 0, steps.length, "Starting workflow execution...");
+
         const result: WorkflowResult = await executeWorkflow({
           page,
           steps,
@@ -188,6 +256,15 @@ export function registerRunWorkflowTool(
           sessionId,
           pageIdentifier: identifier,
         });
+
+        await sendProgress(
+          extra,
+          result.completedSteps,
+          steps.length,
+          result.failedStep !== undefined
+            ? `Workflow stopped at step ${result.failedStep}`
+            : "Workflow complete"
+        );
 
         // 5. Build multi-content response
         const content: ToolResult["content"] = [];

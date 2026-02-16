@@ -2,6 +2,9 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestClient, TestContext } from "../../helpers/mcp-test-client.js";
 import { WEB_FIXTURE_DIR, WEB_PORT } from "../../helpers/fixtures.js";
 import { parseToolResult } from "../../helpers/parse-tool-result.js";
+import { writeFileSync, unlinkSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
 /**
  * Parse multi-content workflow result into summary, step metadata, and step images.
@@ -518,6 +521,467 @@ describe("run_workflow", () => {
 
       // Only 1 step result exists (second step never executed)
       expect(stepTexts.length).toBe(1);
+    }, 30_000);
+  });
+
+  // ─── v1.2 Workflow Actions ──────────────────────────────────────────
+
+  describe("v1.2 workflow actions", () => {
+    it("executes select action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "select", selector: "#color-select", value: "blue" },
+            { action: "assert", selector: "#color-select", assertType: "value-equals", expected: "blue" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(3);
+    }, 30_000);
+
+    it("executes press action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "type", selector: "#text-input", text: "" },
+            { action: "click", selector: "#text-input" },
+            { action: "press", key: "a" },
+            { action: "assert", selector: "#text-input", assertType: "value-equals", expected: "a" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+    }, 30_000);
+
+    it("executes hover action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "hover", selector: "#hover-target" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const hoverStep = JSON.parse(stepTexts[1].text!);
+      expect(hoverStep.action).toBe("hover");
+      expect(hoverStep.success).toBe(true);
+    }, 30_000);
+
+    it("executes scroll action with direction", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "scroll", selector: "#scroll-container", direction: "down", amount: 200 },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const scrollStep = JSON.parse(stepTexts[1].text!);
+      expect(scrollStep.action).toBe("scroll");
+      expect(scrollStep.success).toBe(true);
+    }, 30_000);
+
+    it("executes evaluate action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "evaluate", expression: "document.title = 'Changed'" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(2);
+    }, 30_000);
+
+    it("executes drag action", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "drag", sourceSelector: "#drag-source", targetSelector: "#drop-target" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const dragStep = JSON.parse(stepTexts[1].text!);
+      expect(dragStep.action).toBe("drag");
+      expect(dragStep.success).toBe(true);
+    }, 30_000);
+
+    it("executes upload action", async () => {
+      // Create a temporary test file
+      const tempFilePath = join(tmpdir(), "workflow-upload-test.txt");
+      writeFileSync(tempFilePath, "test upload content");
+
+      try {
+        const result = await ctx.client.callTool({
+          name: "run_workflow",
+          arguments: {
+            sessionId,
+            steps: [
+              { action: "navigate", url: WEB_URL },
+              { action: "upload", selector: "#file-input", files: [tempFilePath] },
+            ],
+            pageIdentifier: WEB_URL,
+          },
+        });
+
+        expect(result.isError).toBeFalsy();
+
+        const { summary, stepTexts } = parseWorkflowResult(result);
+        expect(summary.workflow).toBe("complete");
+
+        const uploadStep = JSON.parse(stepTexts[1].text!);
+        expect(uploadStep.action).toBe("upload");
+        expect(uploadStep.success).toBe(true);
+      } finally {
+        try { unlinkSync(tempFilePath); } catch { /* ignore */ }
+      }
+    }, 30_000);
+
+    it("validates select requires exactly one selection method", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "select", selector: "#color-select" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      const content = result.content as Array<{ type: string; text?: string }>;
+      const errorText = content.find((c) => c.type === "text")?.text ?? "";
+      expect(errorText).toContain("exactly one of");
+    }, 30_000);
+
+    it("validates drag requires sourceSelector and targetSelector", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "drag", sourceSelector: "#drag-source" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      const content = result.content as Array<{ type: string; text?: string }>;
+      const errorText = content.find((c) => c.type === "text")?.text ?? "";
+      expect(errorText).toContain("targetSelector");
+    }, 30_000);
+  });
+
+  // ─── v1.2 Workflow Assertions ───────────────────────────────────────
+
+  describe("v1.2 workflow assertions", () => {
+    it("css-equals -- passes when CSS property matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#css-test-element", assertType: "css-equals", property: "color", expected: "rgb(255, 0, 0)" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("css-equals");
+    }, 30_000);
+
+    it("css-equals -- fails when CSS property does not match", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#css-test-element", assertType: "css-equals", property: "color", expected: "rgb(0, 0, 255)" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBe(true);
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("stopped");
+      expect(summary.assertionsFailed).toBe(1);
+
+      // The assert step is step index 1 (after navigate)
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(false);
+    }, 30_000);
+
+    it("url-equals -- passes when URL matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "url-equals", expected: WEB_URL + "/" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("url-equals");
+    }, 30_000);
+
+    it("url-contains -- passes when URL contains substring", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "url-contains", expected: "localhost" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("url-contains");
+    }, 30_000);
+
+    it("title-equals -- passes when title matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "title-equals", expected: "Test Fixture" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("title-equals");
+    }, 30_000);
+
+    it("count-equals -- passes when element count matches", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#color-select option", assertType: "count-equals", expected: "4" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.passed).toBe(true);
+      expect(assertStep.assertion.assertType).toBe("count-equals");
+    }, 30_000);
+
+    it("a11y-passes -- scopes to selector and returns structured result", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", selector: "#a11y-good-section", assertType: "a11y-passes" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      // The section may have color-contrast violations from the red text,
+      // so we verify structure rather than asserting pass
+      const { stepTexts } = parseWorkflowResult(result);
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.assertType).toBe("a11y-passes");
+      expect(typeof assertStep.assertion.passed).toBe("boolean");
+      expect(assertStep.assertion.expected).toBe("0 accessibility violations");
+      // Selector should be scoped
+      expect(assertStep.assertion.selector).toBe("#a11y-good-section");
+    }, 30_000);
+
+    it("a11y-passes -- works without selector (full page)", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "assert", assertType: "a11y-passes" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      // Don't check pass/fail since full page may have a11y issues -- just verify structure
+      const { stepTexts } = parseWorkflowResult(result);
+      const assertStep = JSON.parse(stepTexts[1].text!);
+      expect(assertStep.assertion.assertType).toBe("a11y-passes");
+      expect(typeof assertStep.assertion.passed).toBe("boolean");
+    }, 30_000);
+
+    it("multi-step workflow combining v1.2 actions and assertions", async () => {
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "select", selector: "#color-select", value: "green" },
+            { action: "assert", selector: "#color-select", assertType: "value-equals", expected: "green" },
+            { action: "hover", selector: "#hover-target" },
+            { action: "assert", assertType: "url-contains", expected: "localhost" },
+            { action: "scroll", direction: "down", amount: 100 },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(6);
+    }, 30_000);
+  });
+
+  // ─── BUG-1 Regression: Navigate preserves collectors ──────────────
+
+  describe("navigate preserves collectors (BUG-1 regression)", () => {
+    it("consoleLogs count is populated after navigate to different URL", async () => {
+      // First navigate to WEB_URL to reset state, then navigate to page2 and evaluate
+      // to trigger console.log. The navigate to page2 re-keys the page ref from WEB_URL
+      // to the page2 URL, which is exactly the scenario BUG-1 fixes.
+      const page2Url = `${WEB_URL}/page2.html`;
+
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "navigate", url: page2Url },
+            { action: "evaluate", expression: "console.log('post-navigate-marker')" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(3);
+
+      // The evaluate step (index 2) should capture the console.log.
+      // If navigate broke collectors (original BUG-1), consoleLogs would be 0.
+      const evalStep = JSON.parse(stepTexts[2].text!);
+      expect(evalStep.success).toBe(true);
+      expect(evalStep.consoleLogs).toBeGreaterThan(0);
+
+      // Navigate back to WEB_URL to restore state for any future tests
+      await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [{ action: "navigate", url: WEB_URL }],
+          pageIdentifier: page2Url,
+        },
+      });
     }, 30_000);
   });
 });

@@ -125,6 +125,6 @@ describe("wait_for_element", () => {
     expect(result.isError).toBe(true);
     const content = result.content as Array<{ type: string; text: string }>;
     const text = content.find((c) => c.type === "text")?.text ?? "";
-    expect(text.toLowerCase()).toContain("did not reach state");
+    expect(text.toLowerCase()).toContain("element not found within timeout");
   }, 30_000);
 });

@@ -9,6 +9,7 @@ import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
 import { captureDesktopWindow } from "../screenshot/capture.js";
 import { optimizeScreenshot } from "../screenshot/optimize.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the screenshot_desktop tool with the MCP server
@@ -51,14 +52,8 @@ export function registerScreenshotDesktopTool(
     },
     async ({ sessionId, pid, maxWidth, quality }) => {
       try {
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         console.error(
           `[screenshot_desktop] Capturing window PID ${pid} for session ${sessionId}`

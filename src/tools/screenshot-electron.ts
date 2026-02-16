@@ -9,6 +9,8 @@ import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
 import { capturePlaywrightPage } from "../screenshot/capture.js";
 import { optimizeScreenshot } from "../screenshot/optimize.js";
+import { resolveSelector } from "../interaction/selectors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 /**
  * Register the screenshot_electron tool with the MCP server
@@ -43,17 +45,17 @@ export function registerScreenshotElectronTool(
         .max(100)
         .optional()
         .describe("WebP quality 1-100 (default: 80)"),
+      selector: z
+        .string()
+        .optional()
+        .describe(
+          "CSS selector for element screenshot. Captures only this element instead of the full page. Cannot combine with fullPage."
+        ),
     },
-    async ({ sessionId, fullPage, maxWidth, quality }) => {
+    async ({ sessionId, fullPage, maxWidth, quality, selector }) => {
       try {
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            "Create a session and launch an Electron app first."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         const pageRef = sessionManager.getPageRef(sessionId, "electron");
         if (!pageRef) {
@@ -64,14 +66,34 @@ export function registerScreenshotElectronTool(
           );
         }
 
+        // Validate: selector and fullPage are mutually exclusive
+        if (selector && fullPage) {
+          return createToolError(
+            "Cannot combine selector with fullPage",
+            "Element screenshots are always cropped to the element's bounding box",
+            "Remove fullPage when using selector, or remove selector to capture the full page."
+          );
+        }
+
         console.error(
           `[screenshot_electron] Capturing for session ${sessionId}`
         );
 
-        // Capture raw PNG from Playwright Page
-        const rawBuffer = await capturePlaywrightPage(pageRef.page, {
-          fullPage: fullPage ?? false,
-        });
+        let rawBuffer: Buffer;
+        let screenshotMode: string;
+
+        if (selector) {
+          // Element screenshot: use locator.screenshot()
+          const locator = resolveSelector(pageRef.page, selector);
+          rawBuffer = await locator.screenshot({ type: "png", timeout: 30000 });
+          screenshotMode = "element";
+        } else {
+          // Full page or viewport screenshot (existing behavior)
+          rawBuffer = await capturePlaywrightPage(pageRef.page, {
+            fullPage: fullPage ?? false,
+          });
+          screenshotMode = fullPage ? "full-page" : "viewport";
+        }
 
         // Optimize: resize + WebP conversion
         const optimized = await optimizeScreenshot(rawBuffer, {
@@ -85,7 +107,8 @@ export function registerScreenshotElectronTool(
           {
             sessionId,
             type: "electron",
-            mode: fullPage ? "full-page" : "viewport",
+            mode: screenshotMode,
+            selector: selector ?? undefined,
             width: optimized.width,
             height: optimized.height,
             originalSize: rawBuffer.length,

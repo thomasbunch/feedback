@@ -1,15 +1,18 @@
 /**
  * navigate MCP tool
- * Navigates to URLs and uses browser back/forward on web or Electron pages
+ * Navigates to URLs and uses browser back/forward on web, Electron, or Tauri pages
  */
 
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
-import { capturePlaywrightPage } from "../screenshot/capture.js";
-import { optimizeScreenshot } from "../screenshot/optimize.js";
-import { getActivePage } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+  captureAndOptimize,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the navigate tool with the MCP server
@@ -23,7 +26,7 @@ export function registerNavigateTool(
 ): void {
   server.tool(
     "navigate",
-    "Navigate to a URL or use browser back/forward on a web or Electron page. Returns a screenshot of the resulting page. Use to load pages, follow links, or retrace steps.",
+    "Navigate to a URL or use browser back/forward on a web, Electron, or Tauri page. Returns a screenshot of the resulting page. Use to load pages, follow links, or retrace steps.",
     {
       sessionId: z
         .string()
@@ -36,13 +39,14 @@ export function registerNavigateTool(
         ),
       url: z
         .string()
+        .min(1)
         .optional()
         .describe("URL to navigate to (required when action is 'goto')"),
       pageIdentifier: z
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       waitUntil: z
         .enum(["load", "domcontentloaded", "commit"])
@@ -67,17 +71,8 @@ export function registerNavigateTool(
     }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Validate URL is provided for goto action
         if (action === "goto" && !url) {
@@ -89,22 +84,10 @@ export function registerNavigateTool(
         }
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page, identifier: currentIdentifier, type: pageType } = resolved;
 
-        const { page, identifier: currentIdentifier, type: pageType } = pageResult;
         const effectiveTimeout = timeout ?? 30000;
         const effectiveWaitUntil = waitUntil ?? "load";
 
@@ -115,9 +98,9 @@ export function registerNavigateTool(
             timeout: effectiveTimeout,
           });
 
-          // Re-key page ref AND all collector maps atomically
-          // so page discovery and diagnostic lookups work with the new URL
-          if (pageType === "web" && currentIdentifier !== "electron") {
+          // Only re-key for URL-based identifiers (not fixed "electron"/"tauri" identifiers)
+          const isUrlBased = pageType === "web" && currentIdentifier !== "electron" && currentIdentifier !== "tauri";
+          if (isUrlBased) {
             sessionManager.rekeyIdentifier(sessionId, currentIdentifier, url!);
             // Update the URL field in the re-keyed page ref
             const updatedRef = sessionManager.getPageRef(sessionId, url!);
@@ -153,14 +136,7 @@ export function registerNavigateTool(
         }
 
         // Capture post-navigation screenshot
-        const rawBuffer = await capturePlaywrightPage(page, {
-          fullPage: false,
-        });
-        const optimized = await optimizeScreenshot(rawBuffer, {
-          maxWidth: 1280,
-          quality: 80,
-        });
-        const imageBase64 = optimized.data.toString("base64");
+        const screenshot = await captureAndOptimize(page);
 
         return createScreenshotResult(
           {
@@ -169,8 +145,8 @@ export function registerNavigateTool(
             url: page.url(),
             success: true,
           },
-          imageBase64,
-          optimized.mimeType
+          screenshot.imageBase64,
+          screenshot.mimeType
         );
       } catch (error) {
         const message =

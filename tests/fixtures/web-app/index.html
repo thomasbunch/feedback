@@ -33,6 +33,79 @@
   <label for="test-checkbox">Test Checkbox</label>
   <button id="disabled-btn" disabled>Disabled Button</button>
 
+  <!-- Phase 15: Interaction primitives test elements -->
+  <br />
+  <label for="color-select">Color:</label>
+  <select id="color-select" data-testid="color-dropdown">
+    <option value="">Choose...</option>
+    <option value="red">Red</option>
+    <option value="green">Green</option>
+    <option value="blue">Blue</option>
+  </select>
+
+  <div id="hover-target" data-testid="hover-target" style="display:inline-block;padding:10px;margin:5px;border:1px solid #999;cursor:pointer;position:relative;">
+    Hover Me
+    <div id="tooltip" style="display:none;position:absolute;top:100%;left:0;background:#333;color:#fff;padding:5px 10px;border-radius:4px;white-space:nowrap;">Tooltip text</div>
+  </div>
+
+  <div id="scroll-container" data-testid="scroll-container" style="height:150px;overflow-y:auto;border:1px solid #ccc;margin:10px 0;padding:10px;">
+    <div style="height:800px;">
+      <p id="scroll-top-marker">Top of scroll</p>
+      <div style="height:350px;"></div>
+      <p id="scroll-middle-marker">Middle of scroll</p>
+      <div style="height:350px;"></div>
+      <p id="scroll-bottom-marker">Bottom of scroll</p>
+    </div>
+  </div>
+
+  <input type="file" id="file-input" data-testid="file-input" />
+  <input type="file" id="multi-file-input" data-testid="multi-file-input" multiple />
+  <div id="file-status"></div>
+
+  <div id="content-block" data-testid="content-block">
+    <p>This is <strong>sample content</strong> for text extraction.</p>
+    <ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>
+  </div>
+
+  <!-- Phase 16: Page Control & JavaScript test elements -->
+  <br />
+  <button id="trigger-alert">Alert</button>
+  <button id="trigger-confirm">Confirm</button>
+  <button id="trigger-prompt">Prompt</button>
+
+  <button id="trigger-async">Load Async</button>
+  <div id="async-result" style="display:none">Async loaded</div>
+
+  <div id="responsive-info"></div>
+
+  <div id="storage-status"></div>
+
+  <!-- Phase 17: Quality Auditing test elements -->
+  <div id="a11y-test-section">
+    <img src="placeholder.png" id="img-no-alt" />
+    <button id="btn-no-text" style="width:30px;height:30px;"></button>
+    <div id="low-contrast" style="color:#aaa;background:#fff;">Low contrast text</div>
+    <div id="a11y-good-section" role="region" aria-label="Accessible Section">
+      <h2>Accessible Heading</h2>
+      <p id="css-test-element" style="color:rgb(255,0,0);font-size:20px;display:block;margin:10px;">
+        Styled paragraph for CSS property testing
+      </p>
+    </div>
+  </div>
+
+  <!-- Phase 19: Advanced Interactions test elements -->
+  <div id="drag-drop-zone" style="display:flex;gap:20px;margin:10px 0;">
+    <div id="drag-source" draggable="true" data-testid="drag-source" style="width:80px;height:80px;background:#4CAF50;color:white;display:flex;align-items:center;justify-content:center;cursor:grab;border-radius:4px;">Drag me</div>
+    <div id="drop-target" data-testid="drop-target" style="width:120px;height:80px;border:2px dashed #999;display:flex;align-items:center;justify-content:center;border-radius:4px;">Drop here</div>
+  </div>
+  <div id="drag-status"></div>
+
+  <button id="fetch-mock-target" data-testid="fetch-mock-target">Fetch Mock Target</button>
+  <div id="fetch-mock-result" data-testid="fetch-mock-result"></div>
+
+  <a id="popup-link" href="/page2.html" target="_blank" data-testid="popup-link">Open in new tab</a>
+  <button id="window-open-btn" data-testid="window-open-btn">window.open()</button>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

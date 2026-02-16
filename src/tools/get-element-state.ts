@@ -7,8 +7,14 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
-import { createToolError, createToolResult } from "../utils/errors.js";
-import { resolveSelector, getActivePage } from "../interaction/selectors.js";
+import { createToolResult } from "../utils/errors.js";
+import { resolveSelector } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+  handleSelectorError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the get_element_state tool with the MCP server
@@ -29,6 +35,7 @@ export function registerGetElementStateTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Element selector. CSS: #id, .class, div > span. Text: text=Click me. Role: role=button[name='Submit']. Test ID: testid=my-btn"
         ),
@@ -36,7 +43,7 @@ export function registerGetElementStateTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       attributes: z
         .array(z.string())
@@ -54,35 +61,14 @@ export function registerGetElementStateTool(
     async ({ sessionId, selector, pageIdentifier, attributes, timeout }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page } = resolved;
 
-        const { page } = pageResult;
         const effectiveTimeout = timeout ?? 30000;
 
         // Resolve selector to Playwright Locator
@@ -137,36 +123,7 @@ export function registerGetElementStateTool(
           boundingBox: box,
         });
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
-
-        // Strict mode violation: selector matched multiple elements
-        if (message.includes("strict mode violation")) {
-          return createToolError(
-            "Selector matched multiple elements",
-            `Selector "${selector}" matched more than one element (strict mode violation)`,
-            "Use a more specific selector or add :nth-child(), :first-of-type, or similar to target a single element."
-          );
-        }
-
-        // Timeout: element not found or not attached within timeout
-        if (
-          message.includes("Timeout") ||
-          message.includes("timeout")
-        ) {
-          return createToolError(
-            "Element not found within timeout",
-            `Selector "${selector}" did not match any element within ${timeout ?? 30000}ms`,
-            "Check the selector is correct, the element exists in the DOM, or increase the timeout. Take a screenshot first to verify the page state."
-          );
-        }
-
-        // Default error
-        return createToolError(
-          "Failed to read element state",
-          `Selector: "${selector}" — ${message}`,
-          "Take a screenshot to verify the element exists and is visible on the page."
-        );
+        return handleSelectorError(error, { selector, timeout, actionName: "read element state" });
       }
     }
   );

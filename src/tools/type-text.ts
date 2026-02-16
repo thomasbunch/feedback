@@ -1,15 +1,20 @@
 /**
  * type_text MCP tool
- * Types text into input fields on web or Electron pages using Playwright Locator API
+ * Types text into input fields on web, Electron, or Tauri pages using Playwright Locator API
  */
 
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
-import { capturePlaywrightPage } from "../screenshot/capture.js";
-import { optimizeScreenshot } from "../screenshot/optimize.js";
-import { resolveSelector, getActivePage } from "../interaction/selectors.js";
+import { resolveSelector } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+  captureAndOptimize,
+  handleSelectorError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the type_text tool with the MCP server
@@ -23,13 +28,14 @@ export function registerTypeTextTool(
 ): void {
   server.tool(
     "type_text",
-    "Type text into an input field or textarea on a web or Electron page. Returns a screenshot after typing. Uses fill (paste) by default; set pressSequentially for apps with keystroke handlers.",
+    "Type text into an input field or textarea on a web, Electron, or Tauri page. Returns a screenshot after typing. Uses fill (paste) by default; set pressSequentially for apps with keystroke handlers.",
     {
       sessionId: z
         .string()
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Element selector for the input field. CSS: #email, .search-box, input[name='query']. Role: role=textbox[name='Email']. Test ID: testid=search-input"
         ),
@@ -40,7 +46,7 @@ export function registerTypeTextTool(
         .string()
         .optional()
         .describe(
-          "URL or 'electron' to target a specific page. Omit if session has only one page."
+          "URL, 'electron', or 'tauri' to target a specific page. Omit if session has only one page."
         ),
       pressSequentially: z
         .boolean()
@@ -81,35 +87,13 @@ export function registerTypeTextTool(
     }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page } = pageResult;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page } = resolved;
 
         // Resolve selector to Playwright Locator
         const locator = resolveSelector(page, selector);
@@ -141,14 +125,7 @@ export function registerTypeTextTool(
         }
 
         // Capture post-type screenshot
-        const rawBuffer = await capturePlaywrightPage(page, {
-          fullPage: false,
-        });
-        const optimized = await optimizeScreenshot(rawBuffer, {
-          maxWidth: 1280,
-          quality: 80,
-        });
-        const imageBase64 = optimized.data.toString("base64");
+        const screenshot = await captureAndOptimize(page);
 
         return createScreenshotResult(
           {
@@ -159,33 +136,12 @@ export function registerTypeTextTool(
             mode: pressSequentially ? "pressSequentially" : "fill",
             success: true,
           },
-          imageBase64,
-          optimized.mimeType
+          screenshot.imageBase64,
+          screenshot.mimeType
         );
       } catch (error) {
         const message =
           error instanceof Error ? error.message : String(error);
-
-        // Strict mode violation: selector matched multiple elements
-        if (message.includes("strict mode violation")) {
-          return createToolError(
-            "Selector matched multiple elements",
-            `Selector "${selector}" matched more than one element (strict mode violation)`,
-            "Use a more specific selector or add :nth-child(), :first-of-type, or similar to target a single element."
-          );
-        }
-
-        // Timeout: element not found or not actionable within timeout
-        if (
-          message.includes("Timeout") ||
-          message.includes("timeout")
-        ) {
-          return createToolError(
-            "Element not found or not editable within timeout",
-            `Selector "${selector}" did not match any visible, editable element within ${timeout ?? 30000}ms`,
-            "Check the selector is correct, the element is visible and editable, or increase the timeout. Take a screenshot first to verify the page state."
-          );
-        }
 
         // Element is not editable (not an input/textarea/contenteditable)
         if (
@@ -200,12 +156,7 @@ export function registerTypeTextTool(
           );
         }
 
-        // Default error
-        return createToolError(
-          "Failed to type text",
-          `Selector: "${selector}" — ${message}`,
-          "Take a screenshot to verify the element exists and is an editable text field."
-        );
+        return handleSelectorError(error, { selector, timeout, actionName: "type text" });
       }
     }
   );

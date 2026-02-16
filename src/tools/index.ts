@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createToolResult } from "../utils/errors.js";
+import { validateSession, isToolResult } from "../utils/tool-helpers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(resolve(__dirname, "../../package.json"), "utf-8"));
@@ -31,6 +32,26 @@ import { registerGetErrorsTool } from "./get-errors.js";
 import { registerGetNetworkLogsTool } from "./get-network-logs.js";
 import { registerGetProcessOutputTool } from "./get-process-output.js";
 import { registerRunWorkflowTool } from "./run-workflow.js";
+import { registerSelectOptionTool } from "./select-option.js";
+import { registerPressKeyTool } from "./press-key.js";
+import { registerHoverElementTool } from "./hover-element.js";
+import { registerScrollTool } from "./scroll.js";
+import { registerGetPageContentTool } from "./get-page-content.js";
+import { registerFileUploadTool } from "./file-upload.js";
+import { registerEvaluateJavascriptTool } from "./evaluate-javascript.js";
+import { registerHandleDialogTool } from "./handle-dialog.js";
+import { registerResizeViewportTool } from "./resize-viewport.js";
+import { registerWaitForConditionTool } from "./wait-for-condition.js";
+import { registerManageStorageTool } from "./manage-storage.js";
+import { registerAuditAccessibilityTool } from "./audit-accessibility.js";
+import { registerGetAccessibilityTreeTool } from "./get-accessibility-tree.js";
+import { registerCompareScreenshotsTool } from "./compare-screenshots.js";
+import { registerGetCssPropertyTool } from "./get-css-property.js";
+import { registerDragDropTool } from "./drag-drop.js";
+import { registerInterceptNetworkTool } from "./intercept-network.js";
+import { registerManageTabsTool } from "./manage-tabs.js";
+import { registerLaunchTauriTool } from "./launch-tauri.js";
+import { registerScreenshotTauriTool } from "./screenshot-tauri.js";
 
 /**
  * Register all MCP tools with the server
@@ -68,6 +89,10 @@ export function registerTools(
     {},
     async () => {
       const sessionId = sessionManager.create();
+
+      // Notify MCP clients that resource list changed (new session resources available)
+      server.sendResourceListChanged();
+
       return createToolResult({
         sessionId,
         created: true,
@@ -97,19 +122,14 @@ export function registerTools(
       sessionId: z.string().describe("The session ID to end"),
     },
     async ({ sessionId }) => {
-      const session = sessionManager.get(sessionId);
-      if (!session) {
-        const availableSessions = sessionManager.list();
-        return createToolError(
-          `Session not found: ${sessionId}`,
-          "The session may have already been ended or never existed",
-          availableSessions.length > 0
-            ? `Available sessions: ${availableSessions.join(", ")}`
-            : "No active sessions. Create one with create_session first."
-        );
-      }
+      const session = validateSession(sessionManager, sessionId);
+      if (isToolResult(session)) return session;
 
       await sessionManager.destroy(sessionId);
+
+      // Notify MCP clients that resource list changed (session resources removed)
+      server.sendResourceListChanged();
+
       return createToolResult({
         sessionId,
         ended: true,
@@ -174,5 +194,67 @@ export function registerTools(
   // Tool 23: run_workflow
   registerRunWorkflowTool(server, sessionManager);
 
-  console.error("Registered 23 MCP tools");
+  // Tool 24: select_option
+  registerSelectOptionTool(server, sessionManager);
+
+  // Tool 25: press_key
+  registerPressKeyTool(server, sessionManager);
+
+  // Tool 26: hover_element
+  registerHoverElementTool(server, sessionManager);
+
+  // Tool 27: scroll
+  registerScrollTool(server, sessionManager);
+
+  // Tool 28: get_page_content
+  registerGetPageContentTool(server, sessionManager);
+
+  // Tool 29: file_upload
+  registerFileUploadTool(server, sessionManager);
+
+  // Tool 30: evaluate_javascript
+  registerEvaluateJavascriptTool(server, sessionManager);
+
+  // Tool 31: handle_dialog
+  registerHandleDialogTool(server, sessionManager);
+
+  // Tool 32: resize_viewport
+  registerResizeViewportTool(server, sessionManager);
+
+  // Tool 33: wait_for_condition
+  registerWaitForConditionTool(server, sessionManager);
+
+  // Tool 34: manage_storage
+  registerManageStorageTool(server, sessionManager);
+
+  // Tool 35: audit_accessibility
+  registerAuditAccessibilityTool(server, sessionManager);
+
+  // Tool 36: get_accessibility_tree
+  registerGetAccessibilityTreeTool(server, sessionManager);
+
+  // Tool 37: compare_screenshots
+  registerCompareScreenshotsTool(server, sessionManager);
+
+  // Tool 38: get_css_property
+  registerGetCssPropertyTool(server, sessionManager);
+
+  // Tool 39: drag_drop
+  registerDragDropTool(server, sessionManager);
+
+  // Tool 40: intercept_network
+  registerInterceptNetworkTool(server, sessionManager);
+
+  // Tool 41: manage_tabs
+  registerManageTabsTool(server, sessionManager);
+
+  // Tool 42: launch_tauri
+  registerLaunchTauriTool(server, sessionManager);
+
+  // Tool 43: screenshot_tauri
+  registerScreenshotTauriTool(server, sessionManager);
+
+  // Element screenshots handled via selector parameter on screenshot_web (Tool 10) and screenshot_electron (Tool 11)
+
+  console.error("Registered 43 MCP tools");
 }
