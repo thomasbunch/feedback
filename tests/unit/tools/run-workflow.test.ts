@@ -938,4 +938,50 @@ describe("run_workflow", () => {
       expect(summary.completedSteps).toBe(6);
     }, 30_000);
   });
+
+  // ─── BUG-1 Regression: Navigate preserves collectors ──────────────
+
+  describe("navigate preserves collectors (BUG-1 regression)", () => {
+    it("consoleLogs count is populated after navigate to different URL", async () => {
+      // First navigate to WEB_URL to reset state, then navigate to page2 and evaluate
+      // to trigger console.log. The navigate to page2 re-keys the page ref from WEB_URL
+      // to the page2 URL, which is exactly the scenario BUG-1 fixes.
+      const page2Url = `${WEB_URL}/page2.html`;
+
+      const result = await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [
+            { action: "navigate", url: WEB_URL },
+            { action: "navigate", url: page2Url },
+            { action: "evaluate", expression: "console.log('post-navigate-marker')" },
+          ],
+          pageIdentifier: WEB_URL,
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+
+      const { summary, stepTexts } = parseWorkflowResult(result);
+      expect(summary.workflow).toBe("complete");
+      expect(summary.completedSteps).toBe(3);
+
+      // The evaluate step (index 2) should capture the console.log.
+      // If navigate broke collectors (original BUG-1), consoleLogs would be 0.
+      const evalStep = JSON.parse(stepTexts[2].text!);
+      expect(evalStep.success).toBe(true);
+      expect(evalStep.consoleLogs).toBeGreaterThan(0);
+
+      // Navigate back to WEB_URL to restore state for any future tests
+      await ctx.client.callTool({
+        name: "run_workflow",
+        arguments: {
+          sessionId,
+          steps: [{ action: "navigate", url: WEB_URL }],
+          pageIdentifier: page2Url,
+        },
+      });
+    }, 30_000);
+  });
 });

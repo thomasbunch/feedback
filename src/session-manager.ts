@@ -383,58 +383,53 @@ export class SessionManager {
 
     // Clean up route handlers for this session
     // Pages will be closed shortly, route handlers are automatically removed
-    // Just clear our tracking state
+    // Just clear our tracking state (collect-then-delete for Map iteration safety)
     const prefix = `${sessionId}:`;
-    for (const [key] of this.routeHandlers) {
-      if (key.startsWith(prefix)) {
-        this.routeHandlers.delete(key);
-      }
+    const routeKeys = [...this.routeHandlers.keys()].filter(k => k.startsWith(prefix));
+    for (const key of routeKeys) {
+      this.routeHandlers.delete(key);
     }
 
     // Clean up popup tracking for this session
     this.popupTracking.delete(sessionId);
 
-    // Clean up page references for this session
-    for (const [key, ref] of this.pageRefs) {
-      if (key.startsWith(prefix)) {
-        try {
-          if (ref.browserContext) {
-            await ref.browserContext.close();
-          }
-          if (ref.browser) {
-            await ref.browser.close();
-          }
-        } catch (error) {
-          console.error(`Error cleaning up page ref in session ${sessionId}:`, error);
+    // Clean up page references for this session (collect-then-delete for Map iteration safety)
+    const pageRefKeys = [...this.pageRefs.keys()].filter(k => k.startsWith(prefix));
+    for (const key of pageRefKeys) {
+      const ref = this.pageRefs.get(key)!;
+      try {
+        if (ref.browserContext) {
+          await ref.browserContext.close();
         }
-        this.pageRefs.delete(key);
+        if (ref.browser) {
+          await ref.browser.close();
+        }
+      } catch (error) {
+        console.error(`Error cleaning up page ref in session ${sessionId}:`, error);
       }
+      this.pageRefs.delete(key);
     }
 
-    // Clean up diagnostic collectors for this session
-    for (const [key, collector] of this.consoleCollectors) {
-      if (key.startsWith(prefix)) {
-        collector.detach();
-        this.consoleCollectors.delete(key);
-      }
+    // Clean up diagnostic collectors for this session (collect-then-delete for Map iteration safety)
+    const consoleKeys = [...this.consoleCollectors.keys()].filter(k => k.startsWith(prefix));
+    for (const key of consoleKeys) {
+      this.consoleCollectors.get(key)!.detach();
+      this.consoleCollectors.delete(key);
     }
-    for (const [key, collector] of this.errorCollectors) {
-      if (key.startsWith(prefix)) {
-        collector.detach();
-        this.errorCollectors.delete(key);
-      }
+    const errorKeys = [...this.errorCollectors.keys()].filter(k => k.startsWith(prefix));
+    for (const key of errorKeys) {
+      this.errorCollectors.get(key)!.detach();
+      this.errorCollectors.delete(key);
     }
-    for (const [key, collector] of this.networkCollectors) {
-      if (key.startsWith(prefix)) {
-        collector.detach();
-        this.networkCollectors.delete(key);
-      }
+    const networkKeys = [...this.networkCollectors.keys()].filter(k => k.startsWith(prefix));
+    for (const key of networkKeys) {
+      this.networkCollectors.get(key)!.detach();
+      this.networkCollectors.delete(key);
     }
-    for (const [key, collector] of this.processCollectors) {
-      if (key.startsWith(prefix)) {
-        collector.detach();
-        this.processCollectors.delete(key);
-      }
+    const processKeys = [...this.processCollectors.keys()].filter(k => k.startsWith(prefix));
+    for (const key of processKeys) {
+      this.processCollectors.get(key)!.detach();
+      this.processCollectors.delete(key);
     }
 
     // Clean up auto-capture data
