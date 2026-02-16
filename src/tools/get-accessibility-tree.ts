@@ -39,6 +39,7 @@ export function registerGetAccessibilityTreeTool(
         ),
       selector: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "CSS selector to scope tree capture to a specific element. Omit for full page (body)."

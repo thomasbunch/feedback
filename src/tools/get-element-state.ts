@@ -35,6 +35,7 @@ export function registerGetElementStateTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Element selector. CSS: #id, .class, div > span. Text: text=Click me. Role: role=button[name='Submit']. Test ID: testid=my-btn"
         ),

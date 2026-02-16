@@ -45,10 +45,12 @@ export function registerAuditAccessibilityTool(
         ),
       include: z
         .string()
+        .min(1)
         .optional()
         .describe("CSS selector to scope audit to a specific page section"),
       exclude: z
         .string()
+        .min(1)
         .optional()
         .describe("CSS selector to exclude elements from audit"),
     },

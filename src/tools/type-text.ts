@@ -35,6 +35,7 @@ export function registerTypeTextTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Element selector for the input field. CSS: #email, .search-box, input[name='query']. Role: role=textbox[name='Email']. Test ID: testid=search-input"
         ),

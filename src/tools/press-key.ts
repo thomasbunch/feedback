@@ -35,11 +35,13 @@ export function registerPressKeyTool(
         .describe("Session ID from create_session"),
       key: z
         .string()
+        .min(1)
         .describe(
           "Key name or combination: Enter, Tab, Escape, Backspace, Delete, ArrowUp, ArrowDown, Control+A, Shift+Tab, Meta+C"
         ),
       selector: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "Element to focus before pressing key. If omitted, key is sent to the page. CSS: #input, .field. Test ID: testid=my-input"

@@ -37,6 +37,7 @@ export function registerFileUploadTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Selector targeting an <input type='file'> element. CSS: #file-input, input[type='file']. Test ID: testid=file-input"
         ),

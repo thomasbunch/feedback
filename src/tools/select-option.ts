@@ -35,15 +35,18 @@ export function registerSelectOptionTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Selector targeting a <select> element. CSS: #my-select, select[name='color']. Test ID: testid=color-dropdown"
         ),
       value: z
         .string()
+        .min(1)
         .optional()
         .describe("Select option by its value attribute"),
       label: z
         .string()
+        .min(1)
         .optional()
         .describe("Select option by its visible text label"),
       index: z

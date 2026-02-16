@@ -33,11 +33,13 @@ export function registerGetCssPropertyTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Element selector. CSS: #id, .class, tag. Text: text=Click me. Role: role=button. Test ID: testid=my-btn"
         ),
       property: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "Single CSS property name (e.g., 'color', 'display', 'font-size'). Use this OR properties, not both."

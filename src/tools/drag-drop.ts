@@ -34,11 +34,13 @@ export function registerDragDropTool(
         .describe("Session ID from create_session"),
       sourceSelector: z
         .string()
+        .min(1)
         .describe(
           "Selector for the element to drag. CSS: #id, .class. Text: text=Drag me. Role: role=listitem. Test ID: testid=drag-source"
         ),
       targetSelector: z
         .string()
+        .min(1)
         .describe(
           "Selector for the drop target element. CSS: #id, .class. Text: text=Drop here. Role: role=region. Test ID: testid=drop-target"
         ),

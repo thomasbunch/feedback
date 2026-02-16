@@ -35,6 +35,7 @@ export function registerHoverElementTool(
         .describe("Session ID from create_session"),
       selector: z
         .string()
+        .min(1)
         .describe(
           "Element to hover over. CSS: #menu-item, .tooltip-trigger. Text: text=Help. Test ID: testid=hover-target"
         ),

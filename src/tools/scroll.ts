@@ -34,6 +34,7 @@ export function registerScrollTool(
         .describe("Session ID from create_session"),
       target: z
         .string()
+        .min(1)
         .optional()
         .describe(
           "CSS selector of element to scroll into view, or container to scroll within. CSS: #content, .scroll-area. Test ID: testid=scroll-container"
