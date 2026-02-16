@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An MCP server for Claude Code that gives it eyes and hands for GUI development. It launches web apps, Electron apps, and Windows desktop applications, captures screenshots, interacts with the UI (click, type, navigate, read state), captures errors and logs, and runs multi-step QA workflows with assertions. All 23 MCP tools are tested end-to-end with 99 automated tests.
+An MCP server for Claude Code that gives it eyes and hands for GUI development. It launches web apps, Electron apps, Tauri apps, and Windows desktop applications, captures screenshots, interacts with the UI (click, type, navigate, select, press keys, hover, scroll, drag-and-drop, file upload), evaluates JavaScript, manages browser dialogs/viewport/storage, intercepts network requests, manages tabs, audits accessibility, compares screenshots for visual regressions, inspects CSS properties, captures errors and logs, exposes data as MCP Resources/Prompts, and runs multi-step QA workflows with 19 assertion types. All 43 MCP tools are tested with 279 automated tests.
 
 ## Core Value
 
@@ -29,32 +29,52 @@ Claude can autonomously build, verify, and fix GUIs without the user needing to 
 - All UI interaction tools verified (click, type, navigate, get_state, wait) — v1.1
 - All diagnostic tools verified (console_logs, errors, network_logs, process_output) — v1.1
 - Workflow engine and all 13 assertion types verified — v1.1
+- Select dropdown options, press keyboard keys, hover elements, scroll page/elements — v1.2
+- Extract page text/HTML, element-level screenshots, execute JavaScript, accessibility tree — v1.2
+- Handle browser dialogs, resize viewport with device emulation, wait for conditions, manage storage — v1.2
+- File upload, drag-and-drop, network interception/mocking, multi-tab management — v1.2
+- axe-core accessibility audit, screenshot pixel-diff comparison, CSS property inspection — v1.2
+- MCP Resources (feedback:// URIs), MCP Prompts (QA templates), MCP Progress Notifications — v1.2
+- Workflow engine: 7 new action types + 6 new assertion types (19 total) — v1.2
+- Tauri app launch, screenshot, and full tool parity via shared getActivePage — v1.2
+- Shared tool-helpers module eliminating duplicated logic across 38 tool files — v1.2
+- All known bugs fixed with regression tests, edge cases hardened with .min(1) validation — v1.2
 
 ### Active
 
-- [ ] Interact with C# desktop apps: click at screen coordinates, simulate keyboard input
-- [ ] Desktop window management: focus, resize, minimize/maximize
-- [ ] Read desktop element state via Windows UI Automation APIs
-- [ ] Self-healing element location using visual similarity when selectors break
-- [ ] Multi-browser support (Firefox, WebKit) beyond Chromium
+(None yet — define requirements in next milestone with `/gsd:new-milestone`)
+
+Previously considered (deferred to future milestones):
+- Interact with C# desktop apps: click at screen coordinates, simulate keyboard input
+- Desktop window management: focus, resize, minimize/maximize
+- Read desktop element state via Windows UI Automation APIs
+- Self-healing element location using visual similarity when selectors break
+- Multi-browser support (Firefox, WebKit) beyond Chromium
+- Session resilience: browser crash detection, collector caps, framework-aware waits
+- Content settling: MutationObserver DOM stability, animation disabling, HMR-aware timing
+- Advanced architecture: plugin system, session persistence, event streaming
+- iframe interaction and shadow DOM traversal
 
 ### Out of Scope
 
 - Mobile app testing (iOS/Android) — different automation stack (Appium), massive scope expansion
-- Visual regression testing (pixel-diff comparisons) — too many false positives, not core to feedback loop
+- Full ML-powered semantic visual diff — pixel-diff comparison covers 90% of use cases
 - Test script persistence/management — Claude generates interactions on the fly, not stored test suites
 - CI/CD integration — this is a development-time tool for Claude Code, not a CI runner
 - Video recording — storage intensive; strategic screenshots at checkpoints provide 80% value
 - Cloud browser grid — scope creep; BrowserStack exists for this
+- Natural language selectors — adds 2-5s latency; Claude generates CSS selectors naturally
+- Full Lighthouse performance audit — 10-30s per run; Core Web Vitals via evaluate_javascript is lighter
+- Record and replay — creates brittle recordings; Claude generates workflows programmatically
 
 ## Context
 
-Shipped v1.1 with 8,749 lines of TypeScript across 48+ files.
-Tech stack: TypeScript/Node.js, MCP SDK, Playwright, Sharp, node-screenshots, vitest.
-23 MCP tools covering sessions, process management, screenshots, UI interaction, error capture, workflows, and assertions.
-99 automated tests across 24 test files with 3 fixture apps.
-Built across 2 milestones: v1.0 (Feb 5-7) and v1.1 (Feb 7-8, 2026).
-All tools verified working end-to-end. 3 bugs found and fixed during v1.1 stabilization.
+Shipped v1.2 with 9,538 lines of TypeScript across 69 files.
+Tech stack: TypeScript/Node.js, MCP SDK, Playwright, Sharp, node-screenshots, vitest, @axe-core/playwright, pixelmatch.
+43 MCP tools covering sessions, process management, screenshots, UI interaction, page control, quality auditing, MCP protocol, workflows, and Tauri support.
+279 automated tests across 49 test files with 3 fixture apps.
+Built across 3 milestones: v1.0 (Feb 5-7), v1.1 (Feb 7-8), v1.2 (Feb 12-15, 2026).
+All tools verified working end-to-end. 3 bugs found and fixed during v1.2 stabilization.
 
 ## Constraints
 
@@ -87,6 +107,16 @@ All tools verified working end-to-end. 3 bugs found and fixed during v1.1 stabil
 | Polling-based window detection | Replaced flaky 2s sleep with 500ms polling, 10s timeout | Good |
 | Collectors attach before page.goto() | Captures initial page load events without workarounds | Good |
 | rekeyIdentifier for atomic map re-keying | Consistent page ref and collector map keys after navigate | Good |
+| Data-only tools (get_page_content, evaluate_js) | createToolResult without screenshot for data extraction | Good |
+| Element screenshots via selector parameter | Extend existing screenshot tools, not separate tools | Good |
+| One-shot dialog handler pattern | Registers, fires once, auto-removes — no stale handlers | Good |
+| feedback:// URI scheme for MCP Resources | Custom scheme for in-memory session data | Good |
+| Best-effort progress notifications | sendProgress never throws — no-op without progressToken | Good |
+| Route handlers in SessionManager Map | Lifecycle management alongside session state | Good |
+| Popup tracking via SessionManager Set | Idempotent guard prevents duplicate listener registration | Good |
+| Shared tool-helpers module | 4 utilities eliminating 239 lines of duplicated boilerplate | Good |
+| .min(1) Zod validation for string params | Clear errors instead of cryptic Playwright failures | Good |
+| Tauri reuses existing dependencies | No new deps needed — wait-on, tree-kill, spawnCrossPlatform | Good |
 
 ---
-*Last updated: 2026-02-08 after v1.1 milestone*
+*Last updated: 2026-02-15 after v1.2 milestone*
