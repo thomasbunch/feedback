@@ -7,9 +7,12 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
-import { capturePlaywrightPage } from "../screenshot/capture.js";
-import { optimizeScreenshot } from "../screenshot/optimize.js";
-import { getActivePage } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+  captureAndOptimize,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the navigate tool with the MCP server
@@ -67,17 +70,8 @@ export function registerNavigateTool(
     }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Validate URL is provided for goto action
         if (action === "goto" && !url) {
@@ -89,22 +83,10 @@ export function registerNavigateTool(
         }
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page, identifier: currentIdentifier, type: pageType } = resolved;
 
-        const { page, identifier: currentIdentifier, type: pageType } = pageResult;
         const effectiveTimeout = timeout ?? 30000;
         const effectiveWaitUntil = waitUntil ?? "load";
 
@@ -153,14 +135,7 @@ export function registerNavigateTool(
         }
 
         // Capture post-navigation screenshot
-        const rawBuffer = await capturePlaywrightPage(page, {
-          fullPage: false,
-        });
-        const optimized = await optimizeScreenshot(rawBuffer, {
-          maxWidth: 1280,
-          quality: 80,
-        });
-        const imageBase64 = optimized.data.toString("base64");
+        const screenshot = await captureAndOptimize(page);
 
         return createScreenshotResult(
           {
@@ -169,8 +144,8 @@ export function registerNavigateTool(
             url: page.url(),
             success: true,
           },
-          imageBase64,
-          optimized.mimeType
+          screenshot.imageBase64,
+          screenshot.mimeType
         );
       } catch (error) {
         const message =

@@ -9,9 +9,14 @@ import { resolve as resolvePath } from "path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
-import { capturePlaywrightPage } from "../screenshot/capture.js";
-import { optimizeScreenshot } from "../screenshot/optimize.js";
-import { resolveSelector, getActivePage } from "../interaction/selectors.js";
+import { resolveSelector } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+  captureAndOptimize,
+  handleSelectorError,
+} from "../utils/tool-helpers.js";
 
 /**
  * Register the file_upload tool with the MCP server
@@ -55,35 +60,13 @@ export function registerFileUploadTool(
     async ({ sessionId, selector, files, pageIdentifier, timeout }) => {
       try {
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page } = pageResult;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page } = resolved;
 
         // Validate file paths exist before calling Playwright
         const resolvedFiles = files.map((f) => resolvePath(f));
@@ -105,14 +88,7 @@ export function registerFileUploadTool(
         });
 
         // Capture post-upload screenshot
-        const rawBuffer = await capturePlaywrightPage(page, {
-          fullPage: false,
-        });
-        const optimized = await optimizeScreenshot(rawBuffer, {
-          maxWidth: 1280,
-          quality: 80,
-        });
-        const imageBase64 = optimized.data.toString("base64");
+        const screenshot = await captureAndOptimize(page);
 
         return createScreenshotResult(
           {
@@ -122,8 +98,8 @@ export function registerFileUploadTool(
             fileCount: files.length,
             success: true,
           },
-          imageBase64,
-          optimized.mimeType
+          screenshot.imageBase64,
+          screenshot.mimeType
         );
       } catch (error) {
         const message =
@@ -141,33 +117,7 @@ export function registerFileUploadTool(
           );
         }
 
-        // Strict mode violation: selector matched multiple elements
-        if (message.includes("strict mode violation")) {
-          return createToolError(
-            "Selector matched multiple elements",
-            `Selector "${selector}" matched more than one element (strict mode violation)`,
-            "Use a more specific selector or add :nth-child(), :first-of-type, or similar to target a single element."
-          );
-        }
-
-        // Timeout: element not found or not actionable within timeout
-        if (
-          message.includes("Timeout") ||
-          message.includes("timeout")
-        ) {
-          return createToolError(
-            "Element not found within timeout",
-            `Selector "${selector}" did not match any element within ${timeout ?? 30000}ms`,
-            "Check the selector is correct, the element exists in the DOM, or increase the timeout. Take a screenshot first to verify the page state."
-          );
-        }
-
-        // Default error
-        return createToolError(
-          "Failed to upload file(s)",
-          `Selector: "${selector}" — ${message}`,
-          "Ensure the selector targets an <input type='file'> element. Take a screenshot to verify the page state."
-        );
+        return handleSelectorError(error, { selector, timeout, actionName: "upload file" });
       }
     }
   );

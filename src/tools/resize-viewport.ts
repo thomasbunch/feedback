@@ -7,9 +7,12 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SessionManager } from "../session-manager.js";
 import { createToolError, createScreenshotResult } from "../utils/errors.js";
-import { capturePlaywrightPage } from "../screenshot/capture.js";
-import { optimizeScreenshot } from "../screenshot/optimize.js";
-import { getActivePage } from "../interaction/selectors.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+  captureAndOptimize,
+} from "../utils/tool-helpers.js";
 
 const VIEWPORT_PRESETS: Record<string, { width: number; height: number }> = {
   "mobile-small": { width: 320, height: 568 },
@@ -102,35 +105,13 @@ export function registerResizeViewportTool(
         }
 
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         // Find the active page
-        const pageResult = getActivePage(
-          sessionManager,
-          sessionId,
-          pageIdentifier
-        );
-        if (!pageResult.success) {
-          return createToolError(
-            pageResult.error,
-            `Session: ${sessionId}`,
-            pageResult.availablePages
-              ? `Available pages: ${pageResult.availablePages.join(", ")}`
-              : undefined
-          );
-        }
-
-        const { page } = pageResult;
+        const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+        if (isToolResult(resolved)) return resolved;
+        const { page } = resolved;
 
         // Determine dimensions
         const dims = hasPreset
@@ -147,14 +128,7 @@ export function registerResizeViewportTool(
         await page.waitForTimeout(200);
 
         // Capture post-resize screenshot
-        const rawBuffer = await capturePlaywrightPage(page, {
-          fullPage: false,
-        });
-        const optimized = await optimizeScreenshot(rawBuffer, {
-          maxWidth: dims.width,
-          quality: 80,
-        });
-        const imageBase64 = optimized.data.toString("base64");
+        const screenshot = await captureAndOptimize(page, { maxWidth: dims.width });
 
         return createScreenshotResult(
           {
@@ -165,8 +139,8 @@ export function registerResizeViewportTool(
             preset: preset ?? null,
             success: true,
           },
-          imageBase64,
-          optimized.mimeType
+          screenshot.imageBase64,
+          screenshot.mimeType
         );
       } catch (error) {
         const message =

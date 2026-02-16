@@ -12,9 +12,12 @@ import {
   createToolResult,
   createScreenshotResult,
 } from "../utils/errors.js";
-import { getActivePage } from "../interaction/selectors.js";
-import { capturePlaywrightPage } from "../screenshot/capture.js";
-import { optimizeScreenshot } from "../screenshot/optimize.js";
+import {
+  validateSession,
+  isToolResult,
+  resolvePageOrError,
+  captureAndOptimize,
+} from "../utils/tool-helpers.js";
 
 /**
  * Set up popup tracking on a BrowserContext.
@@ -109,17 +112,8 @@ export function registerManageTabsTool(
         }
 
         // Validate session exists
-        const session = sessionManager.get(sessionId);
-        if (!session) {
-          const availableSessions = sessionManager.list();
-          return createToolError(
-            `Session not found: ${sessionId}`,
-            "The session may have already been ended",
-            availableSessions.length > 0
-              ? `Available sessions: ${availableSessions.join(", ")}`
-              : "Create a session first with create_session."
-          );
-        }
+        const session = validateSession(sessionManager, sessionId);
+        if (isToolResult(session)) return session;
 
         switch (action) {
           case "list":
@@ -173,18 +167,10 @@ async function handleList(
   sessionId: string,
   pageIdentifier?: string
 ) {
-  const pageResult = getActivePage(sessionManager, sessionId, pageIdentifier);
-  if (!pageResult.success) {
-    return createToolError(
-      pageResult.error,
-      `Session: ${sessionId}`,
-      pageResult.availablePages
-        ? `Available pages: ${pageResult.availablePages.join(", ")}`
-        : undefined
-    );
-  }
+  const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+  if (isToolResult(resolved)) return resolved;
+  const { page } = resolved;
 
-  const { page } = pageResult;
   const context = page.context();
 
   // Set up popup tracking for future popups
@@ -234,14 +220,7 @@ async function handleSwitch(
     await targetPage.waitForLoadState("domcontentloaded").catch(() => {});
 
     // Capture screenshot
-    const rawBuffer = await capturePlaywrightPage(targetPage, {
-      fullPage: false,
-    });
-    const optimized = await optimizeScreenshot(rawBuffer, {
-      maxWidth: 1280,
-      quality: 80,
-    });
-    const imageBase64 = optimized.data.toString("base64");
+    const screenshot = await captureAndOptimize(targetPage);
 
     return createScreenshotResult(
       {
@@ -250,28 +229,16 @@ async function handleSwitch(
         targetPage: targetPageId,
         success: true,
       },
-      imageBase64,
-      optimized.mimeType
+      screenshot.imageBase64,
+      screenshot.mimeType
     );
   }
 
   // Fallback: find by URL matching across context pages
-  const anyPageResult = getActivePage(
-    sessionManager,
-    sessionId,
-    pageIdentifier
-  );
-  if (!anyPageResult.success) {
-    return createToolError(
-      anyPageResult.error,
-      `Session: ${sessionId}`,
-      anyPageResult.availablePages
-        ? `Available pages: ${anyPageResult.availablePages.join(", ")}`
-        : undefined
-    );
-  }
+  const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+  if (isToolResult(resolved)) return resolved;
 
-  const context = anyPageResult.page.context();
+  const context = resolved.page.context();
   setupPopupTracking(sessionManager, sessionId, context);
 
   const allPages = context.pages();
@@ -292,14 +259,7 @@ async function handleSwitch(
   await matchedPage.bringToFront();
   await matchedPage.waitForLoadState("domcontentloaded").catch(() => {});
 
-  const rawBuffer = await capturePlaywrightPage(matchedPage, {
-    fullPage: false,
-  });
-  const optimized = await optimizeScreenshot(rawBuffer, {
-    maxWidth: 1280,
-    quality: 80,
-  });
-  const imageBase64 = optimized.data.toString("base64");
+  const screenshot = await captureAndOptimize(matchedPage);
 
   return createScreenshotResult(
     {
@@ -308,8 +268,8 @@ async function handleSwitch(
       targetPage: targetPageId,
       success: true,
     },
-    imageBase64,
-    optimized.mimeType
+    screenshot.imageBase64,
+    screenshot.mimeType
   );
 }
 
@@ -323,18 +283,10 @@ async function handleOpen(
   pageIdentifier?: string
 ) {
   // Find any existing page to get the BrowserContext
-  const pageResult = getActivePage(sessionManager, sessionId, pageIdentifier);
-  if (!pageResult.success) {
-    return createToolError(
-      pageResult.error,
-      `Session: ${sessionId}`,
-      pageResult.availablePages
-        ? `Available pages: ${pageResult.availablePages.join(", ")}`
-        : undefined
-    );
-  }
+  const resolved = resolvePageOrError(sessionManager, sessionId, pageIdentifier);
+  if (isToolResult(resolved)) return resolved;
 
-  const context = pageResult.page.context();
+  const context = resolved.page.context();
   setupPopupTracking(sessionManager, sessionId, context);
 
   // Create new page and navigate
@@ -350,14 +302,7 @@ async function handleOpen(
   });
 
   // Capture screenshot of the new page
-  const rawBuffer = await capturePlaywrightPage(newPage, {
-    fullPage: false,
-  });
-  const optimized = await optimizeScreenshot(rawBuffer, {
-    maxWidth: 1280,
-    quality: 80,
-  });
-  const imageBase64 = optimized.data.toString("base64");
+  const screenshot = await captureAndOptimize(newPage);
 
   return createScreenshotResult(
     {
@@ -366,8 +311,8 @@ async function handleOpen(
       url: finalUrl,
       success: true,
     },
-    imageBase64,
-    optimized.mimeType
+    screenshot.imageBase64,
+    screenshot.mimeType
   );
 }
 
@@ -378,7 +323,7 @@ async function handleClose(
   sessionManager: SessionManager,
   sessionId: string,
   targetPageId: string,
-  pageIdentifier?: string
+  _pageIdentifier?: string
 ) {
   const targetRef = sessionManager.getPageRef(sessionId, targetPageId);
 
